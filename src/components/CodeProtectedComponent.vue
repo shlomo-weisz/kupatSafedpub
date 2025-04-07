@@ -3,7 +3,7 @@
 		<!-- שדה להקשת קוד -->
 		<div v-if="!isCodeValid" class="code-input-container">
 			<label for="accessCode">הכנס קוד גישה:</label>
-			<input type="password" id="accessCode" v-model="accessCode" placeholder="הכנס קוד" />
+			<input type="password" id="accessCode" v-model="accessCode" placeholder="הכנס קוד" @keydown.enter="checkPass"/>
 			<p v-if="codeError" class="error-message">קוד שגוי, נסה שוב.</p>
 			<button @click="checkPass" class="submit-button">אמת קוד</button>
 		</div>

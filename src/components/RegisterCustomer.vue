@@ -8,7 +8,7 @@
 			<!-- שדה קוד מנהל -->
 			<div v-if="!isAdminCodeValid" class="form-group">
 				<label for="adminCode">קוד מנהל:</label>
-				<input type="password" id="adminCode" v-model="adminCode" />
+				<input type="password" id="adminCode" v-model="adminCode" @keydown.enter="checkPass"/>
 				<p v-if="adminCodeError" class="error-message">קוד מנהל שגוי!</p>
 				<button @click="checkPass" class="submit-button">אמת קוד</button>
 			</div>

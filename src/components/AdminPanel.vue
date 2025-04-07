@@ -3,7 +3,7 @@
 		<div v-if="!isAuthenticated" class="auth-section">
 			<h3>כלי ניהול</h3>
 			<label for="adminPassword">סיסמת ניהול:</label>
-			<input type="password" id="adminPassword" v-model="adminPassword" placeholder="הכנס סיסמת ניהול" />
+			<input type="password" id="adminPassword" v-model="adminPassword" placeholder="הכנס סיסמת ניהול" @keydown.enter="checkPass"/>
 			<button @click="checkPass">כניסה</button>
 			<p v-if="authError" class="error-message">סיסמה שגויה!</p>
 		</div>

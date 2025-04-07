@@ -4,7 +4,7 @@
 		<VolunteerNameInput :value="volunteerName" @update-volunteer-name="volunteerName = $event" />
 
 		<!-- קומפוננטת הסטטיסטיקות -->
-		<StatsBox :total-taken="totalTaken" :percentage-taken="percentageTaken" />
+		<StatsBox :total-taken="totalTaken" :percentage-taken="percentageTaken" :totalCustomers="totalCustomers"/>
 
 
 
@@ -135,6 +135,8 @@ export default {
 				this.totalTaken = data.totalTaken;
 				this.percentageTaken = data.percentageTaken;
 				this.totalCustomers = data.totalCustomers; // עדכון מספר הלקוחות
+				console.log("totalCustomers:", this.totalCustomers);
+				
 			} catch (error) {
 				console.error("Error updating taken:", error);
 			}

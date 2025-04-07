@@ -2,7 +2,8 @@
 <template>
     <div class="stats-box">
         <h3>סטטיסטיקות</h3>
-        <p>מספר אנשים שלקחו: <span class="highlight">{{ totalTaken }}</span> <span>מתוך: {{  }}</span></p>
+        <p>מספר אנשים שלקחו: <span class="highlight">{{ totalTaken }}</span> </p>
+		<p>מתוך: <span class="highlight">{{ totalCustomers }}</span></p>
         <p>אחוזים: <span class="highlight">{{ percentageTaken }}%</span></p>
 		
    </div>
