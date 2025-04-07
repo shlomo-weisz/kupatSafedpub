@@ -6,7 +6,7 @@
         <p><strong>שם האם:</strong> {{ lastReceived.mother_first_name }}</p>
         <p><strong>ילדים נשואים:</strong> {{ lastReceived.married_children }}</p>
         <p><strong>ילדים לא נשואים:</strong> {{ lastReceived.unmarried_children }}</p>
-        <p><strong>סה"כ ילדים:</strong> {{ lastReceived.unmarried_children + lastReceived.married_children }}</p>
+        <p><strong>סה"כ ילדים:</strong> {{ lastReceived.total_children }}</p>
     </div>
 </template>
 
