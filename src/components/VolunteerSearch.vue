@@ -22,12 +22,12 @@
 			<div v-if="!result">
 				<div class="search-group">
 					<label for="idNumber">חיפוש לפי מספר זהות:</label>
-					<input type="text" v-model="idNumber" :disabled="phoneActive" @input="disableOther('id')" />
+					<input type="text" v-model="idNumber" :disabled="phoneActive" @input="disableOther('id')" @keydown.enter="search" />
 				</div>
 
 				<div class="search-group">
 					<label for="phoneNumber">חיפוש לפי מספר טלפון:</label>
-					<input type="text" v-model="phoneNumber" :disabled="idActive" @input="disableOther('phone')" />
+					<input type="text" v-model="phoneNumber" :disabled="idActive" @input="disableOther('phone')" @keydown.enter="search" />
 				</div>
 
 				<button @click="search">חפש</button>
