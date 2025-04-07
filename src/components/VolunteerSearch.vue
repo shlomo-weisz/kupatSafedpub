@@ -111,6 +111,7 @@ export default {
 			idActive: false,
 			phoneActive: false,
 			result: null,
+			totalCustomers: 0,
 			totalTaken: 0,
 			percentageTaken: 0,
 			lastReceived: null, // פרטי הלקוח האחרון
@@ -133,6 +134,7 @@ export default {
 				const data = await response.json();
 				this.totalTaken = data.totalTaken;
 				this.percentageTaken = data.percentageTaken;
+				this.totalCustomers = data.totalCustomers; // עדכון מספר הלקוחות
 			} catch (error) {
 				console.error("Error updating taken:", error);
 			}
@@ -188,6 +190,7 @@ export default {
 			this.totalTaken = await res.totalTaken; // עדכון מספר האנשים שלקחו
 			this.lastReceived = this.result; // עדכון פרטי הלקוח האחרון
 			this.percentageTaken = await res.percentageTaken; // עדכון האחוזים
+			this.totalCustomers = await res.totalCustomers; // עדכון מספר הלקוחות
 			this.resetSearch(); // איפוס החיפוש
 			console.log("Total taken:", this.totalTaken);
 			console.log("Percentage taken:", this.percentageTaken);
