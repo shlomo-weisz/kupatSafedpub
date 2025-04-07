@@ -6,8 +6,7 @@
 		<!-- קומפוננטת הסטטיסטיקות -->
 		<StatsBox :total-taken="totalTaken" :percentage-taken="percentageTaken" />
 
-		<!-- קומפוננטת פרטי הלקוח האחרון -->
-		<LastReceived :last-received="lastReceived" />
+		
 
 		<!-- קומפוננטת כלי הניהול -->
 		<AdminPanel :base-url="baseURL" />
@@ -79,7 +78,8 @@
 				</ul>
 			</div>
 		</div>
-
+		<!-- קומפוננטת פרטי הלקוח האחרון -->
+		<LastReceived :last-received="lastReceived" />
 		<!-- קומפוננטת רישום לקוח חדש -->
 		<div class="add-customer">
 			<RegisterCustomer :base-url="baseURL" :volunteer_name="volunteerName"/>

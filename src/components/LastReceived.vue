@@ -48,4 +48,25 @@ export default {
     font-size: 14px; /* גודל טקסט של הפסקאות */
     color: #555; /* צבע טקסט אפור כהה */
 }
+
+/* רספונסיביות למסכים קטנים */
+@media (max-width: 768px) {
+    .last-received-box {
+        position: static; /* הסרת המיקום הקבוע */
+        transform: none; /* ביטול ההזזה */
+        width: 90%; /* התאמה לרוחב המסך */
+        margin: 20px auto; /* מיקום במרכז */
+        box-shadow: none; /* הסרת הצל */
+        border: 1px solid #ccc; /* מסגרת פשוטה */
+        padding: 15px; /* ריווח פנימי */
+    }
+
+    .last-received-box h3 {
+        font-size: 16px; /* גודל טקסט קטן יותר */
+    }
+
+    .last-received-box p {
+        font-size: 14px; /* גודל טקסט קטן יותר */
+    }
+}
 </style>
