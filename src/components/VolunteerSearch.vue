@@ -104,7 +104,7 @@ export default {
 	},
 	data() {
 		return {
-			baseURL: `http://${window.location.hostname}:3000`,
+			baseURL: process.env.VUE_APP_API_URL,
 			volunteerName: "",
 			idNumber: "",
 			phoneNumber: "",
