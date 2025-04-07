@@ -54,6 +54,7 @@
 
 				<h2>תוצאות חיפוש</h2>
 				<ul class="result-list">
+					<li><strong>קהילה:</strong> {{ formatValue(result.comunity) }}</li>
 					<li><strong>שם משפחה:</strong> {{ formatValue(result.last_name) }}</li>
 					<li><strong>שם האב:</strong> {{ formatValue(result.father_first_name) }}</li>
 					<li><strong>מספר זהות של האב:</strong> {{ formatValue(result.father_id) }}</li>
@@ -70,8 +71,7 @@
 					<li><strong>עיר:</strong> {{ formatValue(result.city) }}</li>
 					<li><strong>מספר ילדים שאינם נשואים:</strong> {{ formatValue(result.unmarried_children) }}</li>
 					<li><strong>מספר ילדים נשואים:</strong> {{ formatValue(result.married_children) }}</li>
-					<li><strong>סך הכל ילדים:</strong> {{ formatValue(result.unmarried_children +
-						result.married_children) }}</li>
+					<li><strong>סך הכל ילדים:</strong> {{ formatValue(result.total_children) }}</li>
 					<li v-if="result.received"><strong>שם מתנדב שנתן:</strong> {{ formatValue(result.volunteer_name) }}
 					</li>
 					<li v-if="result.received"><strong>שעת קבלה:</strong> {{ formatTime(result.received_time) }}</li>
