@@ -46,6 +46,8 @@ export default {
 			});
 			const data = await response.json();
 			if (data.valid) {
+				// save token
+				localStorage.setItem("tokenUser", data.token); // שמירת הטוקן ב-localStorage
 				this.isCodeValid = true; // הקוד נכון
 				this.codeError = false; // אין שגיאה
 			} else {

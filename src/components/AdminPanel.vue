@@ -50,6 +50,9 @@ export default {
 			});
 			const data = await response.json();
 			if (data.valid) {
+				// save token
+				localStorage.setItem("tokenAdmin", data.token); // שמירת הטוקן ב-localStorage
+				
 				this.isAuthenticated = true; // הקוד נכון
 				this.authError = false; // אין שגיאה
 			} else {
@@ -66,8 +69,9 @@ export default {
 					method: "POST",
 					headers: {
 						"Content-Type": "application/json",
+						"Authorization": `Bearer ${localStorage.getItem("tokenAdmin")}`, // הוספת הטוקן לבקשה
 					},
-					body: JSON.stringify({ "type": type }),
+					body: JSON.stringify({ "type": type, token: localStorage.getItem("tokenAdmin") }), // הוספת הטוקן לבקשה
 				});
 				const data = await response.json();
 				if (data.success) {

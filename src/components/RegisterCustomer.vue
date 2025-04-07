@@ -53,7 +53,7 @@
 							</div>
 							<div class="form-group">
 								<label for="fatherId">מספר זהות של האב:</label>
-								<input type="text" id="fatherId" v-model="customer.fatherId" required/>
+								<input type="text" id="fatherId" v-model="customer.fatherId" required />
 							</div>
 							<div class="form-group">
 								<label for="fatherPhone">מספר טלפון של האב:</label>
@@ -227,7 +227,7 @@ export default {
 				unmarriedChildren: 0,
 			};
 		},
-		async checkPass(){
+		async checkPass() {
 			const response = await fetch(`${this.baseUrl}/auth`, {
 				method: "POST",
 				headers: {
@@ -237,6 +237,8 @@ export default {
 			});
 			const data = await response.json();
 			if (data.valid) {
+				// save token
+				localStorage.setItem("tokenReg", data.token); // שמירת הטוקן ב-localStorage
 				this.isAdminCodeValid = true; // הקוד נכון
 				this.adminCodeError = false; // אין שגיאה
 			} else {
@@ -254,7 +256,10 @@ export default {
 			try {
 				const response = await fetch(`${this.baseUrl}/register`, {
 					method: "POST",
-					headers: { "Content-Type": "application/json" },
+					headers: {
+						"Content-Type": "application/json",
+						"Authorization": `Bearer ${localStorage.getItem("tokenReg")}`, // הוספת הטוקן לבקשה
+					},
 					body: JSON.stringify(this.customer),
 				});
 				const data = await response.json();
