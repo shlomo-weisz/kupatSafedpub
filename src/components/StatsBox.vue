@@ -37,7 +37,7 @@ export default {
     width: 300px; /* רוחב הקומפוננטה */
     text-align: center; /* יישור טקסט למרכז */
     font-family: Arial, sans-serif; /* גופן מודרני */
-	z-index: -1;
+    z-index: -1;
 }
 
 .stats-box h3 {
@@ -57,5 +57,30 @@ export default {
     font-weight: bold; /* טקסט מודגש */
     color: #007bff; /* צבע כחול מודגש */
     font-size: 18px; /* גודל טקסט גדול יותר */
+}
+
+/* רספונסיביות למסכים קטנים */
+@media (max-width: 768px) {
+    .stats-box {
+        position: static; /* הסרת המיקום הקבוע */
+        transform: none; /* ביטול ההזזה */
+        width: 90%; /* התאמה לרוחב המסך */
+        margin: 20px auto; /* מיקום במרכז */
+        box-shadow: none; /* הסרת הצל */
+        border: 1px solid #ccc; /* מסגרת פשוטה */
+        padding: 15px; /* ריווח פנימי גדול יותר */
+    }
+
+    .stats-box h3 {
+        font-size: 16px; /* גודל טקסט קטן יותר */
+    }
+
+    .stats-box p {
+        font-size: 14px; /* גודל טקסט קטן יותר */
+    }
+
+    .stats-box .highlight {
+        font-size: 16px; /* גודל טקסט קטן יותר */
+    }
 }
 </style>

@@ -91,60 +91,79 @@ export default {
 
 <style scoped>
 .admin-panel {
-	position: fixed;
-	top: 15%;
-	right: 20px;
-	transform: translateY(-50%);
-	background-color: #f9f9f9;
-	border: 1px solid #ddd;
-	border-radius: 12px;
-	padding: 20px;
-	box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-	width: 250px;
-	font-family: Arial, sans-serif;
-	text-align: center;
-	direction: rtl;
-	/* מימין לשמאל */
-	z-index: 1;
-	/* מבטיח שהקומפוננטה תהיה מעל כל האלמנטים */
+  position: fixed;
+  top: 15%;
+  right: 20px;
+  transform: translateY(-50%);
+  background-color: #f9f9f9;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  width: 250px;
+  font-family: Arial, sans-serif;
+  text-align: center;
+  direction: rtl;
+  z-index: 1;
 }
 
 .auth-section h3,
 .menu-section h3 {
-	margin-bottom: 15px;
-	font-size: 18px;
-	color: #333;
+  margin-bottom: 15px;
+  font-size: 18px;
+  color: #333;
 }
 
 .auth-section input {
-	width: 90%;
-	padding: 10px;
-	margin-bottom: 10px;
-	border: 1px solid #ccc;
-	border-radius: 4px;
-	font-size: 14px;
+  width: 90%; /* שינוי הרוחב ל-90% */
+  padding: 10px;
+  margin-bottom: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
 }
 
 button {
-	width: 100%;
-	padding: 10px;
-	margin-bottom: 10px;
-	background-color: #007bff;
-	color: white;
-	border: none;
-	border-radius: 4px;
-	cursor: pointer;
-	font-size: 14px;
-	transition: background-color 0.3s ease;
+  width: 90%; /* שינוי הרוחב ל-90% */
+  padding: 10px;
+  margin-bottom: 10px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s ease;
 }
 
 button:hover {
-	background-color: #0056b3;
+  background-color: #0056b3;
 }
 
 .error-message {
-	color: red;
-	font-size: 14px;
-	margin-top: 5px;
+  color: red;
+  font-size: 14px;
+  margin-top: 5px;
+}
+
+/* רספונסיביות למסכים קטנים */
+@media (max-width: 768px) {
+  .admin-panel {
+    position: static; /* הסרת המיקום הקבוע */
+    transform: none; /* ביטול ההזזה */
+    width: 90%; /* התאמה לרוחב המסך */
+    margin: 20px auto; /* מיקום במרכז */
+    box-shadow: none; /* הסרת הצל */
+    border: 1px solid #ccc; /* מסגרת פשוטה */
+  }
+
+  button {
+    width: 90%; /* שינוי הרוחב ל-90% */
+    font-size: 16px; /* הגדלת הטקסט בכפתורים */
+  }
+
+  .auth-section input {
+    width: 90%; /* שינוי הרוחב ל-90% */
+  }
 }
 </style>

@@ -299,13 +299,75 @@ export default {
 </script>
 
 <style>
+/* עיצוב כללי */
 body {
-	background-color: #f0f4f8;
-	/* צבע רקע נעים */
-	font-family: Arial, sans-serif;
-	margin: 0;
-	padding: 0;
-	z-index: 1000;
+  background-color: #f0f4f8;
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+/* עיצוב לקומפוננטות */
+.container {
+  direction: rtl;
+  max-width: 1500px;
+  margin: 120px auto;
+  text-align: center;
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background-color: #ffffff;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* עיצוב רספונסיבי */
+@media (max-width: 768px) {
+  body {
+    margin: 0;
+    padding: 0;
+  }
+
+  .container {
+    max-width: 90%; /* שינוי הרוחב ל-90% */
+    margin: 20px auto;
+    padding: 10px;
+    box-shadow: none;
+    border: none;
+  }
+
+  .stats-box,
+  .add-customer,
+  .result-box,
+  .update-form {
+    position: static; /* הסרת מיקום קבוע */
+    margin: 10px 0;
+    width: 90%; /* שינוי הרוחב ל-90% */
+  }
+
+  .header {
+    position: static; /* הסרת מיקום קבוע */
+    text-align: center;
+    padding: 10px;
+    font-size: 16px;
+  }
+
+  .result-list {
+    grid-template-columns: 1fr; /* עמודה אחת */
+  }
+
+  button {
+    width: 90%; /* שינוי הרוחב ל-90% */
+    font-size: 14px;
+  }
+
+  .search-group {
+    width: 90%; /* שינוי הרוחב ל-90% */
+    margin: 10px 0;
+  }
+
+  .search-group input {
+    width: 90%; /* שינוי הרוחב ל-90% */
+  }
 }
 
 .header {
@@ -354,19 +416,6 @@ body {
 	margin: 0 0 10px;
 	font-size: 16px;
 	color: #333;
-}
-
-.container {
-	direction: rtl;
-	max-width: 1500px;
-	margin: 120px auto;
-	/* מרכז את התיבה מתחת לכותרת */
-	text-align: center;
-	padding: 20px;
-	border: 1px solid #ccc;
-	border-radius: 8px;
-	background-color: #ffffff;
-	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 /* מצב חיפוש פעיל */
