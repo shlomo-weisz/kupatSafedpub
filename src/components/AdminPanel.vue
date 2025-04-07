@@ -4,7 +4,7 @@
 			<h3>כלי ניהול</h3>
 			<label for="adminPassword">סיסמת ניהול:</label>
 			<input type="password" id="adminPassword" v-model="adminPassword" placeholder="הכנס סיסמת ניהול" />
-			<button @click="authenticate">כניסה</button>
+			<button @click="checkPass">כניסה</button>
 			<p v-if="authError" class="error-message">סיסמה שגויה!</p>
 		</div>
 
@@ -39,13 +39,21 @@ export default {
 		};
 	},
 	methods: {
-		authenticate() {
-			const correctPassword = "admin123"; // סיסמת ניהול נכונה
-			if (this.adminPassword === correctPassword) {
-				this.isAuthenticated = true;
-				this.authError = false;
+		
+		async checkPass() {
+			const response = await fetch(`${this.baseUrl}/auth`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({ password: this.adminPassword, type: "admin" }),
+			});
+			const data = await response.json();
+			if (data.valid) {
+				this.isAuthenticated = true; // הקוד נכון
+				this.authError = false; // אין שגיאה
 			} else {
-				this.authError = true;
+				this.authError = true; // הקוד שגוי
 			}
 		},
 		async sendReport(type) {

@@ -10,7 +10,7 @@
 				<label for="adminCode">קוד מנהל:</label>
 				<input type="password" id="adminCode" v-model="adminCode" />
 				<p v-if="adminCodeError" class="error-message">קוד מנהל שגוי!</p>
-				<button @click="validateAdminCode" class="submit-button">אמת קוד</button>
+				<button @click="checkPass" class="submit-button">אמת קוד</button>
 			</div>
 
 			<!-- שאר הטופס -->
@@ -158,7 +158,6 @@ export default {
 		return {
 			showForm: false,
 			isAdminCodeValid: false, // האם קוד המנהל אומת בהצלחה
-			authCode: "444", // קוד אימות
 			adminCode: "", // קוד מנהל שהוזן
 			adminCodeError: false, // האם הקוד שגוי
 
@@ -228,12 +227,20 @@ export default {
 				unmarriedChildren: 0,
 			};
 		},
-		validateAdminCode() {
-			if (this.adminCode === this.authCode) {
-				this.adminCodeError = false; // הקוד נכון, אין שגיאה
-				this.isAdminCodeValid = true; // הקוד אומת בהצלחה
+		async checkPass(){
+			const response = await fetch(`${this.baseUrl}/auth`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({ password: this.adminCode, type: "register" }),
+			});
+			const data = await response.json();
+			if (data.valid) {
+				this.isAdminCodeValid = true; // הקוד נכון
+				this.adminCodeError = false; // אין שגיאה
 			} else {
-				this.adminCodeError = true; // הקוד שגוי, הצגת שגיאה
+				this.adminCodeError = true; // הקוד שגוי
 			}
 		},
 		async registerCustomer() {
