@@ -98,7 +98,8 @@ export default {
 			}
 		},
 	},
-	beforeDestroy() {
+	
+	beforeUnmount() {
 		if (this.intervalId) {
 			clearInterval(this.intervalId);
 		}

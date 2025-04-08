@@ -1,8 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import HomePage from './components/HomePage.vue';
-import MyLogo from './components/myLogo.vue';
 import AnotherPage from './components/AnotherPage.vue'; // דוגמה לדף נוסף
-import App from './App.vue';
 
 const routes = [
   {

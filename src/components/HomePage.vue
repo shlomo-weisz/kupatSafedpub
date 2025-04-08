@@ -8,9 +8,9 @@
 </template>
 
 <script>
-import VolunteerSearch from './components/VolunteerSearch.vue';
-import myLogo from './components/myLogo.vue';
-import CodeProtectedComponent from "./components/CodeProtectedComponent.vue";
+import VolunteerSearch from './VolunteerSearch.vue';
+import myLogo from './myLogo.vue';
+import CodeProtectedComponent from "./CodeProtectedComponent.vue";
 
 export default {
   components: {
@@ -23,7 +23,7 @@ export default {
 
 <style>
 /* העיצוב נשאר כפי שהוא */
-body {
+/* body {
   background-image:
     linear-gradient(rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.85)),
     url('./assets/image.png');
@@ -32,5 +32,5 @@ body {
   background-repeat: no-repeat;
   background-attachment: fixed;
   background-color: #f8f8f8;
-}
+} */
 </style>
