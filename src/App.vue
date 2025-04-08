@@ -1,25 +1,16 @@
 <template>
-	<CodeProtectedComponent>
-		<div>
-			<VolunteerSearch />
-			<myLogo />
-		</div>
-	</CodeProtectedComponent>
+  <div>
+    <router-view /> <!-- כאן יוצג התוכן של הנתיב הנוכחי -->
+  </div>
 </template>
 
 <script>
-import VolunteerSearch from './components/VolunteerSearch.vue';
-import myLogo from './components/myLogo.vue';
-import CodeProtectedComponent from "./components/CodeProtectedComponent.vue";
-
-export default {
-	components: {
-		VolunteerSearch,
-		myLogo,
-		CodeProtectedComponent,
-	}
-};
+export default {};
 </script>
+
+<style>
+/* ניתן להשאיר עיצוב כללי כאן אם יש צורך */
+</style>
 
 <style>
 body {

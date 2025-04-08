@@ -256,7 +256,10 @@ export default {
 			try {
 				// שילוב כל השדות (כולל אלה שלא ניתנים לעריכה) עם השדות הניתנים לעריכה
 				const updatedData = { ...this.result, ...this.editableFields };
-
+				// use formatValue to format the values
+				Object.keys(updatedData).forEach((key) => {
+					updatedData[key] = this.formatValue(updatedData[key]);
+				});
 				const response = await fetch(`${this.baseURL}/update`, {
 					method: "POST",
 					headers: {
