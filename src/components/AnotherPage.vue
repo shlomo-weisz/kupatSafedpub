@@ -37,6 +37,7 @@
 export default {
 	data() {
 		return {
+			base_url: "https://wheather-israel.fly.dev/api",
 			youtubeLink: "",
 			email: "",
 			downloadLink: null,
@@ -53,7 +54,7 @@ export default {
 			}
 
 			try {
-				const response = await fetch("https://fromyoutube-production.up.railway.app/api/upload", {
+				const response = await fetch(`${this.base_url}/upload`, {
 					method: "POST",
 					headers: {
 						"Content-Type": "application/json",
@@ -72,7 +73,7 @@ export default {
 
 				this.intervalId = setInterval(async () => {
 					const statusResponse = await fetch(
-						`https://fromyoutube-production.up.railway.app/api/status/${task_id}`,
+						`${base_url}/status/${task_id}`,
 						{
 							method: "GET",
 							headers: {
