@@ -73,7 +73,7 @@ export default {
 
 				this.intervalId = setInterval(async () => {
 					const statusResponse = await fetch(
-						`${base_url}/status/${task_id}`,
+						`${this.base_url}/status/${task_id}`,
 						{
 							method: "GET",
 							headers: {
