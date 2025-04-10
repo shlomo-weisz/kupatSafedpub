@@ -68,7 +68,9 @@ export default {
 				alert("אנא הכנס קישור מיוטיוב");
 				return;
 			}
-
+			this.downloadLink = null; // איפוס הקישור להורדה
+			this.progress = null; // איפוס אחוזי התקדמות
+			this.statusMessage = "ממתין להתחלת ההורדה..."; // איפוס הודעת סטטוס
 			try {
 				const response = await fetch(`${this.base_url}/upload`, {
 					method: "POST",
@@ -86,8 +88,7 @@ export default {
 				}
 				const { message, task_id } = await response.json();
 				this.statusMessage = message || "ממתין להתחלת ההורדה...";
-
-				this.intervalId = setInterval(async () => {
+				while(!this.downloadLink) {
 					const statusResponse = await fetch(
 						`${this.base_url}/status/${task_id}`,
 						{
@@ -106,9 +107,10 @@ export default {
 					// אם הקישור מוכן, עצור את הבדיקה
 					if (statusData.link) {
 						this.downloadLink = statusData.link;
-						clearInterval(this.intervalId);
 					}
-				}, 5000); // בדיקה כל 5 שניות
+					setTimeout(() => {}, 1000); // השהיה של שניה בין הבדיקות
+				}
+				
 			} catch (error) {
 				console.error(error);
 				alert("אירעה שגיאה, נסה שוב מאוחר יותר");
