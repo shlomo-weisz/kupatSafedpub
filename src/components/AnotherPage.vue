@@ -37,8 +37,8 @@
 export default {
 	data() {
 		return {
-			//base_url: "https://fromyoutube-production.up.railway.app/api",
-			base_url: "https://wheather-israel.fly.dev/api",
+			base_url: "https://fromyoutube-production.up.railway.app/api",
+			//base_url: "https://wheather-israel.fly.dev/api",
 			youtubeLink: "",
 			email: "",
 			downloadLink: null,
