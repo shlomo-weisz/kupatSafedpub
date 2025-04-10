@@ -2,6 +2,14 @@
 	<div class="container">
 		<div class="box">
 			<h2>הורדת קישור מיוטיוב</h2>
+
+			<!-- תיבת בחירה בין שרתים -->
+			<label for="serverSelect">בחר שרת:</label>
+			<select id="serverSelect" v-model="server" @change="updateServer">
+				<option value="1">שרת 1</option>
+				<option value="2">שרת 2</option>
+			</select>
+
 			<label for="youtubeLink">קישור יוטיוב:</label>
 			<input
 				type="text"
@@ -16,6 +24,7 @@
 				v-model="email"
 				placeholder="הכנס מייל לשיתוף"
 			/>
+			
 			<button @click="handleSubmit">שלח</button>
 
 			<!-- הצגת התקדמות -->
@@ -37,8 +46,10 @@
 export default {
 	data() {
 		return {
-			base_url: "https://fromyoutube-production.up.railway.app/api",
-			//base_url: "https://wheather-israel.fly.dev/api",
+			server: 1, // שרת ברירת מחדל
+			base_url: "https://fromyoutube-production.up.railway.app/api", // כתובת ברירת מחדל
+			base_url1: "https://fromyoutube-production.up.railway.app/api",
+			base_url2: "https://wheather-israel.fly.dev/api",
 			youtubeLink: "",
 			email: "",
 			downloadLink: null,
@@ -48,6 +59,10 @@ export default {
 		};
 	},
 	methods: {
+		updateServer() {
+			// עדכון כתובת השרת בהתאם לבחירה
+			this.base_url = this.server === 1 ? this.base_url1 : this.base_url2;
+		},
 		async handleSubmit() {
 			if (!this.youtubeLink) {
 				alert("אנא הכנס קישור מיוטיוב");
@@ -70,7 +85,7 @@ export default {
 					throw new Error("שגיאה בשליחת הבקשה לשרת");
 				}
 				const { message, task_id } = await response.json();
-				alert(message);
+				this.statusMessage = message || "ממתין להתחלת ההורדה...";
 
 				this.intervalId = setInterval(async () => {
 					const statusResponse = await fetch(
@@ -130,10 +145,12 @@ label {
 	font-weight: bold;
 }
 
-input {
+input,
+select {
 	padding: 10px;
 	border: 1px solid #ccc;
 	border-radius: 5px;
+	width: 100%;
 }
 
 button {
