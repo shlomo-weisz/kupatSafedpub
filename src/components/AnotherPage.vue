@@ -7,7 +7,7 @@
 			<label for="serverSelect">בחר שרת:</label>
 			<select id="serverSelect" v-model="server" @change="updateServer">
 				<option value="1">שרת 1</option>
-				<option value="2">שרת 2</option>
+				<!--<option value="2">שרת 2</option> -->
 			</select>
 
 			<label for="youtubeLink">קישור יוטיוב:</label>
