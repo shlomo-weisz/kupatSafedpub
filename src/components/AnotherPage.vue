@@ -108,7 +108,7 @@ export default {
 					if (statusData.link) {
 						this.downloadLink = statusData.link;
 					}
-					setTimeout(() => {}, 1000); // השהיה של שניה בין הבדיקות
+					setTimeout(() => {}, 20000); // השהיה של שניה בין הבדיקות
 				}
 				
 			} catch (error) {
