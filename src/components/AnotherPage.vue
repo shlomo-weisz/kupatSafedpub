@@ -11,20 +11,10 @@
 			</select>
 
 			<label for="youtubeLink">קישור יוטיוב:</label>
-			<input
-				type="text"
-				id="youtubeLink"
-				v-model="youtubeLink"
-				placeholder="הכנס קישור מיוטיוב"
-			/>
+			<input type="text" id="youtubeLink" v-model="youtubeLink" placeholder="הכנס קישור מיוטיוב" />
 			<label for="email">מייל (אופציונלי):</label>
-			<input
-				type="email"
-				id="email"
-				v-model="email"
-				placeholder="הכנס מייל לשיתוף"
-			/>
-			
+			<input type="email" id="email" v-model="email" placeholder="הכנס מייל לשיתוף" />
+
 			<button @click="handleSubmit">שלח</button>
 
 			<!-- הצגת התקדמות -->
@@ -59,6 +49,9 @@ export default {
 		};
 	},
 	methods: {
+		delay(ms) {
+			return new Promise((resolve) => setTimeout(resolve, ms));
+		},
 		updateServer() {
 			// עדכון כתובת השרת בהתאם לבחירה
 			this.base_url = this.server === 1 ? this.base_url1 : this.base_url2;
@@ -88,7 +81,7 @@ export default {
 				}
 				const { message, task_id } = await response.json();
 				this.statusMessage = message || "ממתין להתחלת ההורדה...";
-				while(!this.downloadLink) {
+				while (!this.downloadLink) {
 					const statusResponse = await fetch(
 						`${this.base_url}/status/${task_id}`,
 						{
@@ -108,16 +101,16 @@ export default {
 					if (statusData.link) {
 						this.downloadLink = statusData.link;
 					}
-					setTimeout(() => {}, 20000); // השהיה של שניה בין הבדיקות
+					await this.delay(20000); // המתן 2 שניות לפני הבדיקה הבאה
 				}
-				
+
 			} catch (error) {
 				console.error(error);
 				alert("אירעה שגיאה, נסה שוב מאוחר יותר");
 			}
 		},
 	},
-	
+
 	beforeUnmount() {
 		if (this.intervalId) {
 			clearInterval(this.intervalId);
