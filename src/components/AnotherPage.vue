@@ -36,7 +36,7 @@
 export default {
 	data() {
 		return {
-			server: 1, // שרת ברירת מחדל
+			server: 2, // שרת ברירת מחדל
 			base_url: "https://fromyoutube-production.up.railway.app/api", // כתובת ברירת מחדל
 			base_url1: "https://fromyoutube-production.up.railway.app/api",
 			base_url2: "https://reserves-french-alternative-easter.trycloudflare.com/api",
