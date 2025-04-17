@@ -6,8 +6,8 @@
 			<!-- תיבת בחירה בין שרתים -->
 			<label for="serverSelect">בחר שרת:</label>
 			<select id="serverSelect" v-model="server" @change="updateServer">
-				<option value="1">שרת 1</option>
-				<!--<option value="2">שרת 2</option> -->
+				<!--<option value="1">שרת 1</option>-->
+				<option value="2">שרת 2</option> 
 			</select>
 
 			<label for="youtubeLink">קישור יוטיוב:</label>
@@ -39,7 +39,7 @@ export default {
 			server: 1, // שרת ברירת מחדל
 			base_url: "https://fromyoutube-production.up.railway.app/api", // כתובת ברירת מחדל
 			base_url1: "https://fromyoutube-production.up.railway.app/api",
-			base_url2: "https://wheather-israel.fly.dev/api",
+			base_url2: "https://reserves-french-alternative-easter.trycloudflare.com/api",
 			youtubeLink: "",
 			email: "",
 			downloadLink: null,
