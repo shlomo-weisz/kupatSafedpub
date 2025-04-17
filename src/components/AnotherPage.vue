@@ -6,14 +6,14 @@
 			<!-- תיבת בחירה בין שרתים -->
 			<label for="serverSelect">בחר שרת:</label>
 			<select id="serverSelect" v-model="server" @change="updateServer">
-				<!--<option value="1">שרת 1</option>-->
-				<option value="2">שרת 2</option> 
+				<option value="1">שרת 1</option>
+				<option value="2"> שרת 2 מומלץ ומהיר</option> 
 			</select>
 
 			<label for="youtubeLink">קישור יוטיוב:</label>
 			<input type="text" id="youtubeLink" v-model="youtubeLink" placeholder="הכנס קישור מיוטיוב" />
 			<label for="email">מייל (אופציונלי):</label>
-			<input type="email" id="email" v-model="email" placeholder="הכנס מייל לשיתוף" />
+			<input type="email" id="email" v-model="email" placeholder="הכנס מייל לשיתוף, אחרת הקובץ יחסם בנטפרי" />
 
 			<button @click="handleSubmit">שלח</button>
 
@@ -27,6 +27,7 @@
 			<div v-if="downloadLink" class="result">
 				<p>הקישור להורדה מוכן:</p>
 				<a :href="downloadLink" target="_blank">הורד כאן</a>
+				<p> תזכורת: הקישור ימחק בעוד שעה<br> צרו לעצמכם עותק או תורידו את הקובץ</p>
 			</div>
 		</div>
 	</div>
@@ -101,7 +102,14 @@ export default {
 					if (statusData.link) {
 						this.downloadLink = statusData.link;
 					}
-					await this.delay(20000); // המתן 2 שניות לפני הבדיקה הבאה
+					else if (statusData.error) {
+						this.statusMessage = statusData.error;
+						break; // עצור את הלולאה אם יש שגיאה
+					}  
+					if (this.progress === 100) {
+						this.statusMessage = "ההורדה הושלמה ומעלה לדרייב! ";
+					}
+					await this.delay(2000); // המתן 2 שניות לפני הבדיקה הבאה
 				}
 
 			} catch (error) {
@@ -145,7 +153,7 @@ select {
 	padding: 10px;
 	border: 1px solid #ccc;
 	border-radius: 5px;
-	width: 100%;
+	width: 90%;
 }
 
 button {
