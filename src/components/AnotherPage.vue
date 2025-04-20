@@ -6,7 +6,7 @@
 			<!-- תיבת בחירה בין שרתים -->
 			<label for="serverSelect">בחר שרת:</label>
 			<select id="serverSelect" v-model="server" @change="updateServer">
-				<option value="1">שרת 1</option>
+				<!--<option value="1">שרת 1</option>-->
 				<option value="2"> שרת 2 מומלץ ומהיר</option> 
 			</select>
 
@@ -93,7 +93,9 @@ export default {
 						}
 					);
 					const statusData = await statusResponse.json();
-
+					if (!statusResponse.ok) {
+						throw new Error("שגיאה בקבלת הסטטוס מהשרת");
+					}
 					// עדכון סטטוס והתקדמות
 					this.statusMessage = statusData.status || "מוריד את הסרטון...";
 					this.progress = statusData.progress || 0;
@@ -115,6 +117,8 @@ export default {
 			} catch (error) {
 				console.error(error);
 				alert("אירעה שגיאה, נסה שוב מאוחר יותר");
+				//relode
+				this.$router.go(0);
 			}
 		},
 	},
