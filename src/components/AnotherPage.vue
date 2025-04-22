@@ -6,8 +6,8 @@
 			<!-- תיבת בחירה בין שרתים -->
 			<label for="serverSelect">בחר שרת:</label>
 			<select id="serverSelect" v-model="server" @change="updateServer">
-				<!--<option value="1">שרת 1</option>-->
-				<option value="2"> שרת 2 מומלץ ומהיר</option> 
+				<option value="1">שרת 1</option>
+				<!-- <option value="2"> שרת 2 מומלץ ומהיר</option> -->
 			</select>
 
 			<label for="youtubeLink">קישור יוטיוב:</label>
@@ -37,10 +37,10 @@
 export default {
 	data() {
 		return {
-			server: 2, // שרת ברירת מחדל
-			base_url: "https://reserves-french-alternative-easter.trycloudflare.com/api", // כתובת ברירת מחדל
+			server: 1, // שרת ברירת מחדל
+			base_url: "https://fromyoutube-production.up.railway.app/api", // כתובת ברירת מחדל
 			base_url1: "https://fromyoutube-production.up.railway.app/api",
-			base_url2: "https://reserves-french-alternative-easter.trycloudflare.com/api",
+			base_url2: "",
 			youtubeLink: "",
 			email: "",
 			downloadLink: null,
@@ -55,7 +55,14 @@ export default {
 		},
 		updateServer() {
 			// עדכון כתובת השרת בהתאם לבחירה
-			this.base_url = this.server === 1 ? this.base_url1 : this.base_url2;
+			if (this.server === 1) {
+				this.base_url = this.base_url1;
+			} else if (this.server === 2) {
+				this.base_url = this.base_url2;
+			}
+			//this.base_url = this.server === 1 ? this.base_url1 : this.base_url2;
+			console.log("Server updated to:", this.base_url);
+			console.log("Server selected:", this.server);
 		},
 		async handleSubmit() {
 			if (!this.youtubeLink) {
