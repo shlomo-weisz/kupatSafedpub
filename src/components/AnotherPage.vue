@@ -49,7 +49,29 @@ export default {
 			statusMessage: "ממתין להתחלת ההורדה...", // הודעת סטטוס
 		};
 	},
+	created() {
+		// קריאת פרמטר URL בעת טעינת הקומפוננטה
+		this.getURLParameters();
+	},
 	methods: {
+		getURLParameters() {
+			// קבלת פרמטרים מה-URL
+			const urlParams = new URLSearchParams(window.location.search);
+			const urlParameter = urlParams.get('url');
+			
+			// אם קיים פרמטר URL, הצב אותו בתיבת הקישור
+			if (urlParameter) {
+				try {
+					// פענוח ה-URL (במקרה שהוא מקודד)
+					this.youtubeLink = decodeURIComponent(urlParameter);
+					console.log("URL parameter found:", this.youtubeLink);
+				} catch (error) {
+					console.error("Error decoding URL parameter:", error);
+					// אם יש שגיאה בפענוח, השתמש בערך כפי שהוא
+					this.youtubeLink = urlParameter;
+				}
+			}
+		},
 		delay(ms) {
 			return new Promise((resolve) => setTimeout(resolve, ms));
 		},
