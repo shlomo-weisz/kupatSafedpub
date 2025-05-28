@@ -1,7 +1,7 @@
 <template>
-  <div>
-    <router-view /> <!-- כאן יוצג התוכן של הנתיב הנוכחי -->
-  </div>
+	<div>
+		<router-view /> <!-- כאן יוצג התוכן של הנתיב הנוכחי -->
+	</div>
 </template>
 
 <script>
@@ -9,10 +9,15 @@ export default {};
 </script>
 
 <style>
-/* ניתן להשאיר עיצוב כללי כאן אם יש צורך */
-</style>
+html,
+body {
+	height: 100%;
+	margin: 0;
+	padding: 0;
+	overflow-x: hidden;
+	/* Prevent horizontal scrolling */
+}
 
-<style>
 body {
 	/* הגדרת שכבת צבע לבן חצי-שקוף ומעליה את התמונה שלך */
 	background-image:
@@ -33,5 +38,23 @@ body {
 
 	/* צבע רקע כגיבוי במקרה שהתמונה לא נטענת */
 	background-color: #f8f8f8;
+	font-family: Arial, sans-serif;
+	/* Ensure consistent font */
+	-webkit-text-size-adjust: 100%;
+	/* Prevent iOS text size adjustment */
+	text-size-adjust: 100%;
+	/* Prevent other mobile browser text size adjustment */
 }
+
+#app {
+	/* Assuming your root Vue instance mounts to an element with id="app" in index.html */
+	min-height: 100%;
+	display: flex;
+	flex-direction: column;
+}
+
+/* Add a viewport meta tag to public/index.html if not already present */
+/* <meta name="viewport" content="width=device-width, initial-scale=1.0"> */
+
+/* General responsive typography and spacing can be added here if needed */
 </style>

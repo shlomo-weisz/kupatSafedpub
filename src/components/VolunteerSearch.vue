@@ -4,37 +4,46 @@
 		<VolunteerNameInput :value="volunteerName" @update-volunteer-name="volunteerName = $event" />
 
 		<!-- קומפוננטת הסטטיסטיקות -->
-		<StatsBox :total-taken="totalTaken" :percentage-taken="percentageTaken" :totalCustomers="totalCustomers"/>
+		<StatsBox :total-taken="totalTaken" :percentage-taken="percentageTaken" :totalCustomers="totalCustomers" />
 
 
 
 		<!-- קומפוננטת כלי הניהול -->
 		<AdminPanel :base-url="baseURL" />
 
-		<div :class="['container', result ? 'results-active' : 'search-active']">
+		<div :class="['container', result || lastNameResults.length > 0 ? 'results-active' : 'search-active']">
 
 			<h1>מערכת חלוקות קופת צפת</h1>
 
 			<!-- כפתור חזרה לחיפוש -->
-			<button v-if="result" @click="resetSearch" class="back-button">חזרה לחיפוש</button>
+			<button v-if="result || lastNameResults.length > 0" @click="resetSearch" class="back-button">חזרה
+				לחיפוש</button>
 
 			<!-- תיבת החיפוש -->
-			<div v-if="!result">
+			<div v-if="!result && lastNameResults.length === 0">
 				<div class="search-group">
 					<label for="idNumber">חיפוש לפי מספר זהות:</label>
-					<input type="text" v-model="idNumber" :disabled="phoneActive" @input="disableOther('id')" @keydown.enter="search" />
+					<input type="text" v-model="idNumber" :disabled="phoneActive || lastNameActive"
+						@input="disableOther('id')" @keydown.enter="performSearch" />
 				</div>
 
 				<div class="search-group">
 					<label for="phoneNumber">חיפוש לפי מספר טלפון:</label>
-					<input type="text" v-model="phoneNumber" :disabled="idActive" @input="disableOther('phone')" @keydown.enter="search" />
+					<input type="text" v-model="phoneNumber" :disabled="idActive || lastNameActive"
+						@input="disableOther('phone')" @keydown.enter="performSearch" />
 				</div>
 
-				<button @click="search">חפש</button>
+				<div class="search-group">
+					<label for="lastName">חיפוש לפי שם משפחה:</label>
+					<input type="text" v-model="lastName" :disabled="idActive || phoneActive"
+						@input="disableOther('lastName')" @keydown.enter="performSearch" />
+				</div>
+
+				<button @click="performSearch" :disabled="!idNumber && !phoneNumber && !lastName">חפש</button>
 			</div>
 
 			<!-- תוצאות חיפוש -->
-			<div v-if="result" class="result-box">
+			<div v-if="result && !showUpdateForm" class="result-box">
 				<div class="result-header">
 					<button v-if="!result.received" @click="markReceived" class="mark-button">סמן כקיבל</button>
 					<p v-if="result.received" class="received-message">הלקוח כבר קיבל</p>
@@ -77,6 +86,36 @@
 					<li v-if="result.received"><strong>שעת קבלה:</strong> {{ formatTime(result.received_time) }}</li>
 				</ul>
 			</div>
+
+			<!-- תוצאות חיפוש לפי שם משפחה -->
+			<div v-if="(lastNameResults.length > 0 || lastNameSearchError) && !result"
+				class="result-box last-name-results">
+				<h2 v-if="lastNameResults.length > 0">תוצאות חיפוש לפי שם משפחה: {{ lastName }}</h2>
+				<button v-if="lastNameResults.length > 0" @click="toggleLastNameResults" class="toggle-results-button">
+					{{ lastNameResultsVisible ? 'הסתר תוצאות' : 'הצג תוצאות' }}
+				</button>
+				<ul v-if="lastNameResults.length > 0 && lastNameResultsVisible" class="result-list">
+					<li v-for="customer in lastNameResults" :key="customer.id" class="last-name-result-item">
+						<div class="customer-info">
+							<span>{{ customer.last_name }}, {{ customer.father_first_name }} (אב), {{
+								customer.mother_first_name }} (אם) - עיר: {{ customer.city }}</span>
+						</div>
+						<div class="action-buttons">
+							<button v-if="customer.father_id" @click="copyFatherId(customer.father_id)"
+								class="copy-button">העתק ת.ז אב</button>
+							<button v-if="customer.mother_id" @click="copyMotherId(customer.mother_id)"
+								class="copy-button">העתק ת.ז אם</button>
+							<button v-if="customer.father_phone" @click="copyFatherPhone(customer.father_phone)"
+								class="copy-button">העתק טלפון אב</button>
+							<button v-if="customer.mother_phone" @click="copyMotherPhone(customer.mother_phone)"
+								class="copy-button">העתק טלפון אם</button>
+						</div>
+					</li>
+				</ul>
+				<p v-if="lastNameSearchError && lastNameResults.length === 0" class="error-message">{{
+					lastNameSearchError }}</p>
+			</div>
+
 		</div>
 		<!-- קומפוננטת פרטי הלקוח האחרון -->
 		<LastReceived :last-received="lastReceived" />
@@ -117,6 +156,11 @@ export default {
 			lastReceived: null, // פרטי הלקוח האחרון
 			showUpdateForm: false, // מציין אם תיבת העדכון פתוחה
 			editableFields: {}, // שדות הניתנים לעריכה
+			lastName: "",
+			lastNameActive: false,
+			lastNameResults: [],
+			lastNameSearchError: null,
+			lastNameResultsVisible: true, // להצגת התוצאות כברירת מחדל
 		};
 	},
 	mounted() {
@@ -136,7 +180,7 @@ export default {
 				this.percentageTaken = data.percentageTaken;
 				this.totalCustomers = data.totalCustomers; // עדכון מספר הלקוחות
 				console.log("totalCustomers:", this.totalCustomers);
-				
+
 			} catch (error) {
 				console.error("Error updating taken:", error);
 			}
@@ -144,20 +188,56 @@ export default {
 		disableOther(field) {
 			if (field === "id") {
 				this.idActive = this.idNumber.length > 0;
+				if (this.idActive) {
+					this.phoneNumber = "";
+					this.lastName = "";
+					this.phoneActive = false;
+					this.lastNameActive = false;
+				}
 			} else if (field === "phone") {
 				this.phoneActive = this.phoneNumber.length > 0;
+				if (this.phoneActive) {
+					this.idNumber = "";
+					this.lastName = "";
+					this.idActive = false;
+					this.lastNameActive = false;
+				}
+			} else if (field === "lastName") {
+				this.lastNameActive = this.lastName.length > 0;
+				if (this.lastNameActive) {
+					this.idNumber = "";
+					this.phoneNumber = "";
+					this.idActive = false;
+					this.phoneActive = false;
+				}
 			}
-			if (field === "phone") this.idNumber = "";
 		},
-		async search() {
+		async performSearch() {
+			this.result = null; // Clear previous single result
+			this.lastNameResults = []; // Clear previous last name results
+			this.lastNameSearchError = null; // Clear previous last name search error
+
+			if (this.idActive && this.idNumber) {
+				await this.searchByIdOrPhone('id');
+			} else if (this.phoneActive && this.phoneNumber) {
+				await this.searchByIdOrPhone('phone');
+			} else if (this.lastNameActive && this.lastName) {
+				await this.searchByLastNameInternal();
+			} else if (this.idNumber) { // Fallback if active flags are not set but input exists
+				await this.searchByIdOrPhone('id');
+			} else if (this.phoneNumber) {
+				await this.searchByIdOrPhone('phone');
+			} else if (this.lastName) {
+				await this.searchByLastNameInternal();
+			} else {
+				alert("אנא הכנס ערך לחיפוש באחד השדות.");
+			}
+		},
+		async searchByIdOrPhone(type) {
 			try {
 				console.log('Base URL:', this.baseURL);
-				if (!this.idActive && !this.phoneActive) {
-					alert("אנא הכנס מספר זהות או מספר טלפון לחיפוש.");
-					return;
-				}
-				const searchField = this.idActive ? { id: this.idNumber } : { phone: this.phoneNumber };
-				const ext = this.idActive ? "id" : "phone";
+				const searchField = type === 'id' ? { id: this.idNumber } : { phone: this.phoneNumber };
+				const ext = type === 'id' ? "id" : "phone";
 				const response = await fetch(`${this.baseURL}/search${ext}`, {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
@@ -171,9 +251,88 @@ export default {
 				}
 
 			} catch (error) {
-				console.error("Error fetching data:", error);
+				console.error(`Error fetching data by ${type}:`, error);
 				alert("שגיאה בחיפוש, אנא נסה שוב.");
 			}
+		},
+		async searchByLastNameInternal() { // Renamed from searchByLastName
+			if (!this.lastName.trim()) {
+				this.lastNameSearchError = "אנא הכנס שם משפחה לחיפוש.";
+				this.lastNameResults = [];
+				return;
+			}
+			try {
+				const response = await fetch(`${this.baseURL}/searchlastname`, {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ lastName: this.lastName }),
+				});
+				const data = await response.json();
+				if (response.ok && data.success) {
+					this.lastNameResults = data.customers;
+					if (data.customers.length === 0) {
+						// This case should ideally be handled by the server sending a 404 or specific message
+						this.lastNameSearchError = "לא נמצאו לקוחות עם שם משפחה זה.";
+					}
+				} else if (response.status === 404) {
+					this.lastNameResults = [];
+					this.lastNameSearchError = data.message || "לא נמצאו לקוחות התואמים לשם המשפחה שהוזן.";
+				} else {
+					this.lastNameResults = [];
+					this.lastNameSearchError = data.message || "שגיאה בחיפוש לפי שם משפחה.";
+				}
+			} catch (error) {
+				console.error("Error searching by last name:", error);
+				this.lastNameResults = [];
+				this.lastNameSearchError = "שגיאה בחיפוש, אנא נסה שוב.";
+			}
+		},
+		copyFatherId(fatherId) {
+			this.idNumber = fatherId;
+			this.idActive = true;
+			this.phoneActive = false;
+			this.lastNameActive = false;
+			this.phoneNumber = "";
+			this.lastName = "";
+			this.lastNameResults = []; // נקה תוצאות שם משפחה
+			this.lastNameSearchError = null;
+			this.result = null; // Clear single search result
+		},
+		copyMotherId(motherId) {
+			this.idNumber = motherId;
+			this.idActive = true;
+			this.phoneActive = false;
+			this.lastNameActive = false;
+			this.phoneNumber = "";
+			this.lastName = "";
+			this.lastNameResults = [];
+			this.lastNameSearchError = null;
+			this.result = null;
+		},
+		copyFatherPhone(fatherPhone) {
+			this.phoneNumber = fatherPhone;
+			this.phoneActive = true;
+			this.idActive = false;
+			this.lastNameActive = false;
+			this.idNumber = "";
+			this.lastName = "";
+			this.lastNameResults = [];
+			this.lastNameSearchError = null;
+			this.result = null;
+		},
+		copyMotherPhone(motherPhone) {
+			this.phoneNumber = motherPhone;
+			this.phoneActive = true;
+			this.idActive = false;
+			this.lastNameActive = false;
+			this.idNumber = "";
+			this.lastName = "";
+			this.lastNameResults = [];
+			this.lastNameSearchError = null;
+			this.result = null;
+		},
+		toggleLastNameResults() {
+			this.lastNameResultsVisible = !this.lastNameResultsVisible;
 		},
 		async markReceived() {
 			console.log("Volunteer Name:", this.volunteerName);
@@ -203,8 +362,13 @@ export default {
 			this.result = null;
 			this.idNumber = "";
 			this.phoneNumber = "";
+			this.lastName = "";
 			this.idActive = false;
 			this.phoneActive = false;
+			this.lastNameActive = false;
+			this.lastNameResults = [];
+			this.lastNameSearchError = null;
+			this.showUpdateForm = false; // סגירת טופס העדכון אם פתוח
 		},
 		formatTime(dateString) {
 			const date = new Date(dateString);
@@ -319,35 +483,66 @@ body {
 	font-family: Arial, sans-serif;
 	margin: 0;
 	padding: 0;
+	-webkit-text-size-adjust: 100%;
+	/* Prevent iOS text size adjustment after orientation change. */
+	text-size-adjust: 100%;
+	/* Prevent text size adjustment on other mobile browsers. */
 }
 
 /* עיצוב לקומפוננטות */
 .container {
 	direction: rtl;
 	max-width: 1500px;
-	margin: 120px auto;
+	margin: 70px auto 20px;
+	/* Adjusted top margin, auto for L/R, 20px bottom */
 	text-align: center;
 	padding: 20px;
 	border: 1px solid #ccc;
 	border-radius: 8px;
 	background-color: #ffffff;
 	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+	box-sizing: border-box;
+	/* Ensure padding and border are included in the element\'s total width and height */
 }
 
 /* עיצוב רספונסיבי */
-@media (max-width: 768px) {
+@media (max-width: 1200px) {
+
+	/* For laptops and larger tablets */
+	.container {
+		max-width: 95%;
+		margin: 70px auto 15px;
+		/* Adjusted top margin */
+	}
+
+	.update-form {
+		grid-template-columns: repeat(2, 1fr);
+		/* 2 columns for medium screens */
+	}
+
+	.result-list {
+		grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+	}
+}
+
+@media (max-width: 767px) {
+
+	/* Adjusted from 768px for better iPad handling */
 	body {
 		margin: 0;
 		padding: 0;
 	}
 
 	.container {
-		max-width: 90%;
-		/* שינוי הרוחב ל-90% */
-		margin: 20px auto;
+		max-width: 100%;
+		/* Full width on smaller screens */
+		margin: 20px auto 10px;
+		/* Adjusted top margin as header becomes static */
 		padding: 10px;
 		box-shadow: none;
 		border: none;
+		border-radius: 0;
+		/* No border radius for full width */
 	}
 
 	.stats-box,
@@ -355,105 +550,283 @@ body {
 	.result-box,
 	.update-form {
 		position: static;
-		/* הסרת מיקום קבוע */
 		margin: 10px 0;
-		width: 90%;
-		/* שינוי הרוחב ל-90% */
+		width: 100%;
+		/* Full width for these sections */
+		box-sizing: border-box;
+	}
+
+	.update-form {
+		grid-template-columns: 1fr;
+		/* 1 column for small screens */
 	}
 
 	.header {
+		/* Assuming .header is for VolunteerNameInput or similar fixed headers */
 		position: static;
-		/* הסרת מיקום קבוע */
 		text-align: center;
 		padding: 10px;
-		font-size: 16px;
+		font-size: 1em;
+		/* Use em for scalable font size */
+		width: 100%;
+		box-sizing: border-box;
 	}
+
+	/* Adjusting VolunteerNameInput specific styles if it\'s part of .header */
+	.header input {
+		width: calc(100% - 40px);
+		/* Ensure input fits well */
+		margin: 5px 20px;
+	}
+
 
 	.result-list {
 		grid-template-columns: 1fr;
-		/* עמודה אחת */
+		/* Single column for result items */
 	}
 
-	button {
-		width: 90%;
-		/* שינוי הרוחב ל-90% */
-		font-size: 14px;
+	.result-list li {
+		font-size: 0.95em;
+		/* Slightly smaller font for list items */
 	}
+
+	button,
+	.copy-button,
+	.toggle-results-button,
+	.mark-button,
+	.update-button,
+	.cancel-button,
+	.back-button {
+		width: calc(100% - 20px);
+		/* Full width buttons with some padding */
+		margin: 10px auto;
+		/* Centering buttons */
+		padding: 12px 15px;
+		/* Comfortable padding for touch targets */
+		font-size: 1em;
+		/* Scalable font size */
+		box-sizing: border-box;
+	}
+
+	.action-buttons button,
+	.action-buttons .copy-button {
+		/* More specific for buttons in .action-buttons */
+		width: auto;
+		/* Allow multiple buttons per line if space permits */
+		margin: 5px;
+		/* Smaller margin for these buttons */
+		padding: 8px 12px;
+		font-size: 0.9em;
+	}
+
 
 	.search-group {
-		width: 90%;
-		/* שינוי הרוחב ל-90% */
+		width: 100%;
+		/* Full width for search groups */
 		margin: 10px 0;
+		box-sizing: border-box;
 	}
 
 	.search-group input {
-		width: 90%;
-		/* שינוי הרוחב ל-90% */
+		width: calc(100% - 20px);
+		/* Input width with padding */
+		margin: 0 auto;
+		/* Centering input */
+		padding: 12px;
+		font-size: 1em;
+		box-sizing: border-box;
+	}
+
+	.search-group label {
+		padding-right: 10px;
+		/* Add some padding for RTL */
+		padding-left: 10px;
+		/* Add some padding for LTR if needed */
+	}
+
+	h1 {
+		font-size: 1.5em;
+		/* Responsive font size for heading */
+	}
+
+	.last-name-result-item {
+		flex-direction: column;
+		/* Stack info and buttons vertically */
+		align-items: stretch;
+		/* Stretch items to full width */
+	}
+
+	.last-name-result-item .customer-info,
+	.last-name-result-item .action-buttons {
+		width: 100%;
+		text-align: center;
+		/* Center text and buttons */
+		margin-right: 0;
+		/* Remove margin for stacked layout */
+	}
+
+	.last-name-result-item .action-buttons {
+		justify-content: center;
+		/* Center buttons in their container */
+		margin-top: 10px;
+	}
+
+}
+
+@media (max-width: 480px) {
+
+	/* For very small mobile screens */
+	.container {
+		margin: 10px auto 5px;
+		/* Fine-tuned margin for very small screens */
+		padding: 5px;
+	}
+
+	h1 {
+		font-size: 1.2em;
+	}
+
+	button,
+	.copy-button,
+	.toggle-results-button,
+	.mark-button,
+	.update-button,
+	.cancel-button,
+	.back-button {
+		padding: 10px;
+		font-size: 0.95em;
+	}
+
+	.search-group input {
+		padding: 10px;
+		font-size: 0.95em;
+	}
+
+	.result-list li {
+		font-size: 0.9em;
+		padding: 8px;
+	}
+
+	.stats-box {
+		/* Ensure StatsBox is also responsive */
+		width: 100%;
+		padding: 10px;
+		box-sizing: border-box;
+		left: 0;
+		/* Adjust fixed positioning if it was used */
+		top: auto;
+		/* Adjust fixed positioning */
+		position: static;
+		/* Or relative, depending on desired behavior */
+	}
+
+	.admin-panel {
+		/* Assuming AdminPanel might also need adjustments */
+		width: 100%;
+		padding: 10px;
+		box-sizing: border-box;
+		position: static;
+		/* Or relative */
+	}
+
+	.last-name-result-item .action-buttons button {
+		width: calc(50% - 10px);
+		/* Two buttons per row on small screens */
+		margin: 5px;
 	}
 }
 
+
 .header {
 	position: fixed;
-	/* קובע את המיקום כקבוע */
 	top: 0;
+	left: 0;
+	right: 0;
 	width: 100%;
 	z-index: 1000;
-	/* מבטיח שהשורה תהיה מעל כל האלמנטים */
 	text-align: right;
 	padding: 10px 20px;
 	background-color: #007bff;
 	color: white;
 	font-size: 14px;
+	/* Base font size for header */
+	line-height: 1.5;
+	/* Added for better text spacing if content wraps */
 	font-weight: bold;
 	border-bottom: 2px solid #0056b3;
 	display: flex;
 	align-items: center;
 	justify-content: flex-end;
 	gap: 10px;
+	box-sizing: border-box;
 }
 
-.header input {
-	padding: 5px;
-	border: 1px solid #ccc;
-	border-radius: 4px;
-	font-size: 14px;
-	width: 200px;
+@media (max-width: 767px) {
+
+	/* Styles for when header becomes static */
+	.header {
+		/* position: static; is already set in the main 767px block */
+		/* Add any other specific adjustments for static header if needed */
+		justify-content: center;
+		/* Center items in static header */
+		padding-top: 15px;
+		/* Add more padding when static */
+		padding-bottom: 15px;
+	}
+
+	.header input {
+		width: calc(100% - 40px);
+		/* Ensure input fits well */
+		margin: 5px 20px;
+	}
 }
 
 .stats-box {
 	position: fixed;
 	top: 60px;
-	/* מתחת לשורת שם המתנדב */
+	/* Default, might be overridden */
 	left: 10px;
+	/* Default, might be overridden */
 	background-color: #ffffff;
 	border: 1px solid #ccc;
 	border-radius: 8px;
 	padding: 15px;
 	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 	width: 200px;
+	/* Default width */
 	text-align: center;
-}
-
-.stats-box h3 {
-	margin: 0 0 10px;
-	font-size: 16px;
-	color: #333;
+	z-index: 999;
+	/* Ensure it's below header but above other content if overlapping */
+	box-sizing: border-box;
 }
 
 /* מצב חיפוש פעיל */
 .container.search-active {
 	max-width: 500px;
-	/* רוחב תיבת החיפוש */
 	transition: max-width 0.3s ease;
-	/* אנימציה לשינוי הרוחב */
 }
 
 /* מצב תוצאות מוצגות */
 .container.results-active {
 	max-width: 1500px;
-	/* רוחב תיבת התוצאות */
+	/* Default max-width */
 	transition: max-width 0.3s ease;
-	/* אנימציה לשינוי הרוחב */
+}
+
+@media (max-width: 1200px) {
+	.container.results-active {
+		max-width: 95%;
+		/* Adjust for laptops */
+	}
+}
+
+@media (max-width: 767px) {
+
+	.container.search-active,
+	.container.results-active {
+		max-width: 100%;
+		/* Full width on smaller screens */
+	}
 }
 
 h1 {
@@ -478,6 +851,7 @@ h1 {
 	border: 1px solid #ccc;
 	border-radius: 4px;
 	width: 100%;
+	/* Default to full width within its parent */
 	box-sizing: border-box;
 	font-size: 14px;
 }
@@ -521,15 +895,20 @@ button:hover {
 	background: #e9f5ff;
 	border-radius: 4px;
 	text-align: right;
-	/* יישור לימין */
 	direction: rtl;
-	/* כיוון כתיבה מימין לשמאל */
 	max-width: 1200px;
-	/* הגדלת רוחב התיבה */
+	/* Default max-width */
 	margin-left: auto;
-	/* מרכז את התיבה */
 	margin-right: auto;
-	/* מרכז את התיבה */
+	box-sizing: border-box;
+	/* Added for consistency */
+}
+
+@media (max-width: 1200px) {
+	.result-box {
+		max-width: 100%;
+		/* Adjust for laptops, take full width of its container part */
+	}
 }
 
 .result-header {
@@ -586,11 +965,11 @@ button:hover {
 	text-align: right;
 	direction: rtl;
 	display: grid;
-	/* שימוש ב-Grid Layout */
 	grid-template-columns: repeat(3, 1fr);
-	/* 3 עמודות */
+	/* Default 3 columns */
 	gap: 20px;
-	/* ריווח בין השדות */
+	box-sizing: border-box;
+	/* Added for consistency */
 }
 
 .update-group {
@@ -634,36 +1013,101 @@ button:hover {
 
 .result-list {
 	display: grid;
-	/* שימוש ב-Grid Layout */
 	grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-	/* התאמה אוטומטית של העמודות */
+	/* Default responsive grid */
 	gap: 20px;
-	/* ריווח בין הפריטים */
 	list-style-type: none;
-	/* הסרת סימוני העיגולים */
 	padding: 0;
 	margin: 0;
 }
 
-.result-list li {
-	font-size: 16px;
-	padding: 10px;
-	/* ריווח פנימי */
-	border: 1px solid #ccc;
-	/* גבול מסביב */
-	border-radius: 4px;
-	/* פינות מעוגלות */
-	background-color: #ffffff;
-	/* רקע לבן */
-	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-	/* צל קל */
-	text-align: right;
-	/* יישור לימין */
+.last-name-results .result-list {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
 }
 
 .add-customer {
-	margin-top: 80px;
-	/* מרווח מתחת לסטטיסטיקות */
+	margin-top: 20px;
+	/* Reduced margin for better spacing on mobile */
 	text-align: center;
+	padding: 10px;
+	/* Added padding */
+	box-sizing: border-box;
+}
+
+.last-name-result-item {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 10px;
+	border-bottom: 1px solid #ddd;
+	flex-wrap: wrap;
+	/* Allow wrapping for responsiveness */
+}
+
+.last-name-result-item .customer-info {
+	flex-grow: 1;
+	margin-right: 10px;
+	/* Default for larger screens */
+	text-align: right;
+	min-width: 200px;
+	/* Default min-width */
+	word-break: break-word;
+	/* Prevent long strings from breaking layout */
+}
+
+.last-name-result-item .action-buttons {
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+	justify-content: flex-start;
+	/* Default for larger screens */
+	margin-top: 5px;
+	/* Default margin */
+}
+
+.last-name-result-item:last-child {
+	border-bottom: none;
+}
+
+.copy-button {
+	/* Renamed from copy-id-button and generalized */
+	padding: 6px 12px;
+	background-color: #17a2b8;
+	/* Info blue */
+	color: white;
+	border: none;
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 13px;
+	margin-top: 0;
+	transition: background-color 0.3s ease;
+}
+
+.copy-button:hover {
+	background-color: #138496;
+}
+
+.error-message {
+	color: #dc3545;
+	/* Red for errors */
+	margin-top: 10px;
+}
+
+.toggle-results-button {
+	margin-bottom: 10px;
+	padding: 8px 15px;
+	background-color: #6c757d;
+	/* Secondary gray */
+	color: white;
+	border: none;
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 14px;
+}
+
+.toggle-results-button:hover {
+	background-color: #5a6268;
 }
 </style>
