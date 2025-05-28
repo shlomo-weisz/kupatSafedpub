@@ -1,23 +1,27 @@
 <template>
-  <CodeProtectedComponent>
+	<!-- <CodeProtectedComponent>
     <div>
       <VolunteerSearch />
       <myLogo />
     </div>
-  </CodeProtectedComponent>
+  </CodeProtectedComponent> -->
+	<div>
+		<VolunteerSearch />
+		<myLogo />
+	</div>
 </template>
 
 <script>
 import VolunteerSearch from './VolunteerSearch.vue';
 import myLogo from './myLogo.vue';
-import CodeProtectedComponent from "./CodeProtectedComponent.vue";
+//import CodeProtectedComponent from "./CodeProtectedComponent.vue";
 
 export default {
-  components: {
-    VolunteerSearch,
-    myLogo,
-    CodeProtectedComponent,
-  },
+	components: {
+		VolunteerSearch,
+		myLogo,
+		//CodeProtectedComponent,
+	},
 };
 </script>
 
