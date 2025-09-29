@@ -20,7 +20,7 @@
 				<div v-if="!result && lastNameResults.length === 0">
 					<div class="search-group">
 						<label for="idNumber">חיפוש לפי מספר זהות:</label>
-						<input type="text" v-model="idNumber" :disabled="phoneActive || lastNameActive"
+						<input ref="idInput" type="text" v-model="idNumber" :disabled="phoneActive || lastNameActive"
 							@input="disableOther('id')" @keydown.enter="performSearch" />
 					</div>
 
@@ -420,6 +420,12 @@ export default {
 			this.lastNameResults = [];
 			this.lastNameSearchError = null;
 			this.showUpdateForm = false; // סגירת טופס העדכון אם פתוח
+			// Focus ID input so user can type immediately
+			this.$nextTick(() => {
+				if (this.$refs.idInput && typeof this.$refs.idInput.focus === 'function') {
+					this.$refs.idInput.focus();
+				}
+			});
 		},
 		formatTime(dateString) {
 			const date = new Date(dateString);
