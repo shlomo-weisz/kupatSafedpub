@@ -121,9 +121,10 @@
 
 			<!-- קומפוננטת כלי הניהול -->
 			<AdminPanel :base-url="baseURL" />
+
+			<!-- קומפוננטת פרטי הלקוח האחרון (מתחת לסטטיסטיקות) -->
+			<LastReceived :last-received="lastReceived" />
 		</div>
-		<!-- קומפוננטת פרטי הלקוח האחרון -->
-		<LastReceived :last-received="lastReceived" />
 		<!-- קומפוננטת רישום לקוח חדש -->
 		<div class="add-customer">
 			<RegisterCustomer :base-url="baseURL" :volunteer_name="volunteerName" />

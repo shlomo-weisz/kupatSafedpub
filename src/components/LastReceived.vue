@@ -23,15 +23,14 @@ export default {
 
 <style scoped>
 .last-received-box {
-    position: fixed;
-    top: 240px; /* הורדנו את הקומפוננטה למטה יותר */
-    left: 20px; /* צמוד לשמאל */
+    position: static; /* נזרום מתחת לסטטיסטיקות ללא הדבקה */
     background-color: #f9f9f9; /* רקע אפור בהיר */
     border: 1px solid #ddd; /* גבול אפור עדין */
     border-radius: 12px; /* פינות מעוגלות */
     padding: 15px; /* ריווח פנימי */
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* צל עדין */
-    width: 300px; /* רוחב הקומפוננטה */
+    width: 100%; /* יתפוס את רוחב העמודה בגריד */
+    max-width: 300px;
     font-family: Arial, sans-serif; /* גופן מודרני */
     text-align: right; /* יישור לימין */
 }
@@ -53,9 +52,9 @@ export default {
 /* רספונסיביות למסכים קטנים */
 @media (max-width: 768px) {
     .last-received-box {
-        position: static; /* הסרת המיקום הקבוע */
+        position: static; /* הסרת המיקום הדביק במסכים קטנים */
         transform: none; /* ביטול ההזזה */
-        width: 90%; /* התאמה לרוחב המסך */
+        width: 100%; /* רוחב מלא */
         margin: 20px auto; /* מיקום במרכז */
         box-shadow: none; /* הסרת הצל */
         border: 1px solid #ccc; /* מסגרת פשוטה */
