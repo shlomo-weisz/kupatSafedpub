@@ -121,17 +121,16 @@
 
 			<!-- קומפוננטת כלי הניהול -->
 			<AdminPanel :base-url="baseURL" />
-
-			<!-- קומפוננטת פרטי הלקוח האחרון (מתחת לסטטיסטיקות) -->
-			<LastReceived :last-received="lastReceived" />
 		</div>
+		<!-- קומפוננטת פרטי הלקוח האחרון -->
+		<LastReceived :last-received="lastReceived" />
 		<!-- קומפוננטת רישום לקוח חדש -->
 		<div class="add-customer">
 			<RegisterCustomer :base-url="baseURL" :volunteer_name="volunteerName" />
 		</div>
 
 		<!-- Popup: grape juice cards notice -->
-		<div v-if="showJuicePopup" class="popup-overlay" @click.self="closeJuicePopup">
+		<div v-if="false" class="popup-overlay" @click.self="closeJuicePopup">
 			<div class="popup-content" role="dialog" aria-modal="true">
 				<button class="popup-close" @click="closeJuicePopup" aria-label="סגור">×</button>
 				<h3>שים לב</h3>
