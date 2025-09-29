@@ -3,125 +3,140 @@
 		<!-- קומפוננטת שם המתנדב -->
 		<VolunteerNameInput :value="volunteerName" @update-volunteer-name="volunteerName = $event" />
 
-		<!-- קומפוננטת הסטטיסטיקות -->
-		<StatsBox :total-taken="totalTaken" :percentage-taken="percentageTaken" :totalCustomers="totalCustomers" />
+		<!-- Responsive layout wrapper to avoid overlaps -->
+		<div class="layout-grid">
+			<!-- קומפוננטת הסטטיסטיקות -->
+			<StatsBox :total-taken="totalTaken" :percentage-taken="percentageTaken" :totalCustomers="totalCustomers" />
 
+			<div :class="['container', result || lastNameResults.length > 0 ? 'results-active' : 'search-active']">
 
+				<h1>מערכת חלוקות קופת צפת</h1>
 
-		<!-- קומפוננטת כלי הניהול -->
-		<AdminPanel :base-url="baseURL" />
+				<!-- כפתור חזרה לחיפוש -->
+				<button v-if="result || lastNameResults.length > 0" @click="resetSearch" class="back-button">חזרה
+					לחיפוש</button>
 
-		<div :class="['container', result || lastNameResults.length > 0 ? 'results-active' : 'search-active']">
-
-			<h1>מערכת חלוקות קופת צפת</h1>
-
-			<!-- כפתור חזרה לחיפוש -->
-			<button v-if="result || lastNameResults.length > 0" @click="resetSearch" class="back-button">חזרה
-				לחיפוש</button>
-
-			<!-- תיבת החיפוש -->
-			<div v-if="!result && lastNameResults.length === 0">
-				<div class="search-group">
-					<label for="idNumber">חיפוש לפי מספר זהות:</label>
-					<input type="text" v-model="idNumber" :disabled="phoneActive || lastNameActive"
-						@input="disableOther('id')" @keydown.enter="performSearch" />
-				</div>
-
-				<div class="search-group">
-					<label for="phoneNumber">חיפוש לפי מספר טלפון:</label>
-					<input type="text" v-model="phoneNumber" :disabled="idActive || lastNameActive"
-						@input="disableOther('phone')" @keydown.enter="performSearch" />
-				</div>
-
-				<div class="search-group">
-					<label for="lastName">חיפוש לפי שם משפחה:</label>
-					<input type="text" v-model="lastName" :disabled="idActive || phoneActive"
-						@input="disableOther('lastName')" @keydown.enter="performSearch" />
-				</div>
-
-				<button @click="performSearch" :disabled="!idNumber && !phoneNumber && !lastName">חפש</button>
-			</div>
-
-			<!-- תוצאות חיפוש -->
-			<div v-if="result && !showUpdateForm" class="result-box">
-				<div class="result-header">
-					<button v-if="!result.received" @click="markReceived" class="mark-button">סמן כקיבל</button>
-					<p v-if="result.received" class="received-message">הלקוח כבר קיבל</p>
-					<button @click="openUpdateForm" class="update-button">עדכן נתונים</button>
-				</div>
-
-				<!-- תיבת עדכון נתונים -->
-				<div v-if="showUpdateForm" class="update-form">
-					<h3>עדכון נתונים</h3>
-					<div class="update-group" v-for="(value, key) in editableFields" :key="key">
-						<label :for="key">{{ translateField(key) }}:</label>
-						<input type="text" :id="key" v-model="editableFields[key]" :placeholder="translateField(key)" />
+				<!-- תיבת החיפוש -->
+				<div v-if="!result && lastNameResults.length === 0">
+					<div class="search-group">
+						<label for="idNumber">חיפוש לפי מספר זהות:</label>
+						<input type="text" v-model="idNumber" :disabled="phoneActive || lastNameActive"
+							@input="disableOther('id')" @keydown.enter="performSearch" />
 					</div>
-					<button @click="updateCustomer">עדכן</button>
-					<button @click="closeUpdateForm" class="cancel-button">ביטול</button>
+
+					<div class="search-group">
+						<label for="phoneNumber">חיפוש לפי מספר טלפון:</label>
+						<input type="text" v-model="phoneNumber" :disabled="idActive || lastNameActive"
+							@input="disableOther('phone')" @keydown.enter="performSearch" />
+					</div>
+
+					<div class="search-group">
+						<label for="lastName">חיפוש לפי שם משפחה:</label>
+						<input type="text" v-model="lastName" :disabled="idActive || phoneActive"
+							@input="disableOther('lastName')" @keydown.enter="performSearch" />
+					</div>
+
+					<button @click="performSearch" :disabled="!idNumber && !phoneNumber && !lastName">חפש</button>
 				</div>
 
-				<h2>תוצאות חיפוש</h2>
-				<ul class="result-list">
-					<li><strong>קהילה:</strong> {{ formatValue(result.comunity) }}</li>
-					<li><strong>שם משפחה:</strong> {{ formatValue(result.last_name) }}</li>
-					<li><strong>שם האב:</strong> {{ formatValue(result.father_first_name) }}</li>
-					<li><strong>מספר זהות של האב:</strong> {{ formatValue(result.father_id) }}</li>
-					<li><strong>שם האם:</strong> {{ formatValue(result.mother_first_name) }}</li>
-					<li><strong>מספר זהות של האם:</strong> {{ formatValue(result.mother_id) }}</li>
-					<li><strong>מספר טלפון של האב:</strong> {{ formatValue(result.father_phone) }}</li>
-					<li><strong>מספר טלפון של האם:</strong> {{ formatValue(result.mother_phone) }}</li>
-					<li><strong>טלפון נוסף:</strong> {{ formatValue(result.additional_phone) }}</li>
-					<li><strong>רחוב:</strong> {{ formatValue(result.street) }}</li>
-					<li><strong>מספר בית:</strong> {{ formatValue(result.house_number) }}</li>
-					<li><strong>מספר דירה:</strong> {{ formatValue(result.apartment_number) }}</li>
-					<li><strong>כניסה:</strong> {{ formatValue(result.entrance) }}</li>
-					<li><strong>קומה:</strong> {{ formatValue(result.floor) }}</li>
-					<li><strong>עיר:</strong> {{ formatValue(result.city) }}</li>
-					<li><strong>מספר ילדים שאינם נשואים:</strong> {{ formatValue(result.unmarried_children) }}</li>
-					<li><strong>מספר ילדים נשואים:</strong> {{ formatValue(result.married_children) }}</li>
-					<li><strong>סך הכל ילדים:</strong> {{ formatValue(result.total_children) }}</li>
-					<li v-if="result.received"><strong>שם מתנדב שנתן:</strong> {{ formatValue(result.volunteer_name) }}
-					</li>
-					<li v-if="result.received"><strong>שעת קבלה:</strong> {{ formatTime(result.received_time) }}</li>
-				</ul>
+				<!-- תוצאות חיפוש -->
+				<div v-if="result && !showUpdateForm" class="result-box">
+					<div class="result-header">
+						<button v-if="!result.received" @click="markReceived" class="mark-button">סמן כקיבל</button>
+						<p v-if="result.received" class="received-message">הלקוח כבר קיבל</p>
+						<button @click="openUpdateForm" class="update-button">עדכן נתונים</button>
+					</div>
+
+					<!-- תיבת עדכון נתונים -->
+					<div v-if="showUpdateForm" class="update-form">
+						<h3>עדכון נתונים</h3>
+						<div class="update-group" v-for="(value, key) in editableFields" :key="key">
+							<label :for="key">{{ translateField(key) }}:</label>
+							<input type="text" :id="key" v-model="editableFields[key]"
+								:placeholder="translateField(key)" />
+						</div>
+						<button @click="updateCustomer">עדכן</button>
+						<button @click="closeUpdateForm" class="cancel-button">ביטול</button>
+					</div>
+
+					<h2>תוצאות חיפוש</h2>
+					<ul class="result-list">
+						<li><strong>קהילה:</strong> {{ formatValue(result.comunity) }}</li>
+						<li><strong>שם משפחה:</strong> {{ formatValue(result.last_name) }}</li>
+						<li><strong>שם האב:</strong> {{ formatValue(result.father_first_name) }}</li>
+						<li><strong>מספר זהות של האב:</strong> {{ formatValue(result.father_id) }}</li>
+						<li><strong>שם האם:</strong> {{ formatValue(result.mother_first_name) }}</li>
+						<li><strong>מספר זהות של האם:</strong> {{ formatValue(result.mother_id) }}</li>
+						<li><strong>מספר טלפון של האב:</strong> {{ formatValue(result.father_phone) }}</li>
+						<li><strong>מספר טלפון של האם:</strong> {{ formatValue(result.mother_phone) }}</li>
+						<li><strong>טלפון נוסף:</strong> {{ formatValue(result.additional_phone) }}</li>
+						<li><strong>רחוב:</strong> {{ formatValue(result.street) }}</li>
+						<li><strong>מספר בית:</strong> {{ formatValue(result.house_number) }}</li>
+						<li><strong>מספר דירה:</strong> {{ formatValue(result.apartment_number) }}</li>
+						<li><strong>כניסה:</strong> {{ formatValue(result.entrance) }}</li>
+						<li><strong>קומה:</strong> {{ formatValue(result.floor) }}</li>
+						<li><strong>עיר:</strong> {{ formatValue(result.city) }}</li>
+						<li><strong>מספר ילדים שאינם נשואים:</strong> {{ formatValue(result.unmarried_children) }}</li>
+						<li><strong>מספר ילדים נשואים:</strong> {{ formatValue(result.married_children) }}</li>
+						<li><strong>סך הכל ילדים:</strong> {{ formatValue(result.total_children) }}</li>
+						<li v-if="result.received"><strong>שם מתנדב שנתן:</strong> {{ formatValue(result.volunteer_name)
+							}}
+						</li>
+						<li v-if="result.received"><strong>שעת קבלה:</strong> {{ formatTime(result.received_time) }}
+						</li>
+					</ul>
+				</div>
+
+				<!-- תוצאות חיפוש לפי שם משפחה -->
+				<div v-if="(lastNameResults.length > 0 || lastNameSearchError) && !result"
+					class="result-box last-name-results">
+					<h2 v-if="lastNameResults.length > 0">תוצאות חיפוש לפי שם משפחה: {{ lastName }}</h2>
+					<button v-if="lastNameResults.length > 0" @click="toggleLastNameResults"
+						class="toggle-results-button">
+						{{ lastNameResultsVisible ? 'הסתר תוצאות' : 'הצג תוצאות' }}
+					</button>
+					<ul v-if="lastNameResults.length > 0 && lastNameResultsVisible" class="result-list">
+						<li v-for="customer in lastNameResults" :key="customer.id" class="last-name-result-item">
+							<div class="customer-info">
+								<span>{{ customer.last_name }}, {{ customer.father_first_name }} (אב), {{
+									customer.mother_first_name }} (אם) - עיר: {{ customer.city }}</span>
+							</div>
+							<div class="action-buttons">
+								<button v-if="customer.father_id" @click="copyFatherId(customer.father_id)"
+									class="copy-button">העתק ת.ז אב</button>
+								<button v-if="customer.mother_id" @click="copyMotherId(customer.mother_id)"
+									class="copy-button">העתק ת.ז אם</button>
+								<button v-if="customer.father_phone" @click="copyFatherPhone(customer.father_phone)"
+									class="copy-button">העתק טלפון אב</button>
+								<button v-if="customer.mother_phone" @click="copyMotherPhone(customer.mother_phone)"
+									class="copy-button">העתק טלפון אם</button>
+							</div>
+						</li>
+					</ul>
+					<p v-if="lastNameSearchError && lastNameResults.length === 0" class="error-message">{{
+						lastNameSearchError }}</p>
+				</div>
+
 			</div>
 
-			<!-- תוצאות חיפוש לפי שם משפחה -->
-			<div v-if="(lastNameResults.length > 0 || lastNameSearchError) && !result"
-				class="result-box last-name-results">
-				<h2 v-if="lastNameResults.length > 0">תוצאות חיפוש לפי שם משפחה: {{ lastName }}</h2>
-				<button v-if="lastNameResults.length > 0" @click="toggleLastNameResults" class="toggle-results-button">
-					{{ lastNameResultsVisible ? 'הסתר תוצאות' : 'הצג תוצאות' }}
-				</button>
-				<ul v-if="lastNameResults.length > 0 && lastNameResultsVisible" class="result-list">
-					<li v-for="customer in lastNameResults" :key="customer.id" class="last-name-result-item">
-						<div class="customer-info">
-							<span>{{ customer.last_name }}, {{ customer.father_first_name }} (אב), {{
-								customer.mother_first_name }} (אם) - עיר: {{ customer.city }}</span>
-						</div>
-						<div class="action-buttons">
-							<button v-if="customer.father_id" @click="copyFatherId(customer.father_id)"
-								class="copy-button">העתק ת.ז אב</button>
-							<button v-if="customer.mother_id" @click="copyMotherId(customer.mother_id)"
-								class="copy-button">העתק ת.ז אם</button>
-							<button v-if="customer.father_phone" @click="copyFatherPhone(customer.father_phone)"
-								class="copy-button">העתק טלפון אב</button>
-							<button v-if="customer.mother_phone" @click="copyMotherPhone(customer.mother_phone)"
-								class="copy-button">העתק טלפון אם</button>
-						</div>
-					</li>
-				</ul>
-				<p v-if="lastNameSearchError && lastNameResults.length === 0" class="error-message">{{
-					lastNameSearchError }}</p>
-			</div>
-
+			<!-- קומפוננטת כלי הניהול -->
+			<AdminPanel :base-url="baseURL" />
 		</div>
 		<!-- קומפוננטת פרטי הלקוח האחרון -->
 		<LastReceived :last-received="lastReceived" />
 		<!-- קומפוננטת רישום לקוח חדש -->
 		<div class="add-customer">
 			<RegisterCustomer :base-url="baseURL" :volunteer_name="volunteerName" />
+		</div>
+
+		<!-- Popup: grape juice cards notice -->
+		<div v-if="showJuicePopup" class="popup-overlay" @click.self="closeJuicePopup">
+			<div class="popup-content" role="dialog" aria-modal="true">
+				<button class="popup-close" @click="closeJuicePopup" aria-label="סגור">×</button>
+				<h3>שים לב</h3>
+				<p>לתת 2 כרטיסים של מיץ ענבים</p>
+				<p class="popup-countdown">החלון ייסגר אוטומטית בעוד {{ juiceSecondsLeft }} שניות</p>
+			</div>
 		</div>
 	</div>
 </template>
@@ -161,6 +176,10 @@ export default {
 			lastNameResults: [],
 			lastNameSearchError: null,
 			lastNameResultsVisible: true, // להצגת התוצאות כברירת מחדל
+			showJuicePopup: false,
+			juiceSecondsLeft: 6,
+			juicePopupIntervalId: null,
+			juicePopupTimeoutId: null,
 		};
 	},
 	mounted() {
@@ -334,6 +353,36 @@ export default {
 		toggleLastNameResults() {
 			this.lastNameResultsVisible = !this.lastNameResultsVisible;
 		},
+		openJuicePopup() {
+			// clear any existing timers
+			if (this.juicePopupIntervalId) {
+				clearInterval(this.juicePopupIntervalId);
+				this.juicePopupIntervalId = null;
+			}
+			if (this.juicePopupTimeoutId) {
+				clearTimeout(this.juicePopupTimeoutId);
+				this.juicePopupTimeoutId = null;
+			}
+			this.juiceSecondsLeft = 6;
+			this.showJuicePopup = true;
+			this.juicePopupIntervalId = setInterval(() => {
+				if (this.juiceSecondsLeft > 0) this.juiceSecondsLeft -= 1;
+			}, 1000);
+			this.juicePopupTimeoutId = setTimeout(() => {
+				this.closeJuicePopup();
+			}, 6000);
+		},
+		closeJuicePopup() {
+			if (this.juicePopupIntervalId) {
+				clearInterval(this.juicePopupIntervalId);
+				this.juicePopupIntervalId = null;
+			}
+			if (this.juicePopupTimeoutId) {
+				clearTimeout(this.juicePopupTimeoutId);
+				this.juicePopupTimeoutId = null;
+			}
+			this.showJuicePopup = false;
+		},
 		async markReceived() {
 			console.log("Volunteer Name:", this.volunteerName);
 			const response = await fetch(`${this.baseURL}/mark`, {
@@ -345,18 +394,20 @@ export default {
 				body: JSON.stringify({ id: this.result.id, volunteer_name: this.volunteerName }),
 			});
 			const res = await response.json();
-			console.log(res.message);
-			console.log("Total taken:", res.totalTaken);
+
+			// הצגת חלונית רק אם בקשת הסימון הצליחה
+			if (response.ok && res && res.success !== false) {
+				const unmarried = parseInt(this.result && this.result.unmarried_children, 10);
+				if (!isNaN(unmarried) && unmarried >= 7) {
+					this.openJuicePopup();
+				}
+			}
 
 			this.totalTaken = await res.totalTaken; // עדכון מספר האנשים שלקחו
 			this.lastReceived = this.result; // עדכון פרטי הלקוח האחרון
 			this.percentageTaken = await res.percentageTaken; // עדכון האחוזים
 			this.totalCustomers = await res.totalCustomers; // עדכון מספר הלקוחות
 			this.resetSearch(); // איפוס החיפוש
-			console.log("Total taken:", this.totalTaken);
-			console.log("Percentage taken:", this.percentageTaken);
-			//alert("הלקוח סומן כקיבל בהצלחה.");
-
 		},
 		resetSearch() {
 			this.result = null;
@@ -473,6 +524,11 @@ export default {
 			console.log("Volunteer Name in Parent:", newValue);
 		},
 	},
+	beforeUnmount() {
+		// cleanup timers
+		if (this.juicePopupIntervalId) clearInterval(this.juicePopupIntervalId);
+		if (this.juicePopupTimeoutId) clearTimeout(this.juicePopupTimeoutId);
+	},
 };
 </script>
 
@@ -505,7 +561,51 @@ body {
 	/* Ensure padding and border are included in the element\'s total width and height */
 }
 
-/* עיצוב רספונסיבי */
+/***** Layout wrapper *****/
+.layout-grid {
+	display: grid;
+	grid-template-columns: 300px 1fr 280px;
+	gap: 16px;
+	align-items: start;
+	max-width: 1500px;
+	margin: 0 auto;
+	padding: 0 12px;
+	box-sizing: border-box;
+}
+
+/* Ensure children take full column width */
+.layout-grid .admin-panel,
+.layout-grid .stats-box,
+.layout-grid .container {
+	width: 100%;
+}
+
+/* Tweak columns on medium screens */
+@media (max-width: 1200px) {
+	.layout-grid {
+		grid-template-columns: 260px 1fr;
+	}
+
+	/* Push AdminPanel to full-width next row */
+	.layout-grid>.admin-panel {
+		grid-column: 1 / -1;
+	}
+}
+
+/* Single column stack on tablets/phones */
+@media (max-width: 900px) {
+	.layout-grid {
+		grid-template-columns: 1fr;
+	}
+
+	.layout-grid>.admin-panel,
+	.layout-grid>.stats-box,
+	.layout-grid>.container {
+		grid-column: 1 / -1;
+	}
+}
+
+/* רספונסיביות לשורות ולתצוגות שונות */
 @media (max-width: 1200px) {
 
 	/* For laptops and larger tablets */
@@ -537,6 +637,7 @@ body {
 		max-width: 100%;
 		/* Full width on smaller screens */
 		margin: 20px auto 10px;
+		/* Reduced top margin for static flow */
 		/* Adjusted top margin as header becomes static */
 		padding: 10px;
 		box-shadow: none;
@@ -556,20 +657,24 @@ body {
 		box-sizing: border-box;
 	}
 
-	.update-form {
-		grid-template-columns: 1fr;
-		/* 1 column for small screens */
+	.admin-panel {
+		position: static;
+		/* Make AdminPanel static on smaller screens */
+		width: 100%;
+		margin: 10px 0;
+		box-sizing: border-box;
 	}
 
 	.header {
-		/* Assuming .header is for VolunteerNameInput or similar fixed headers */
-		position: static;
-		text-align: center;
-		padding: 10px;
-		font-size: 1em;
-		/* Use em for scalable font size */
-		width: 100%;
-		box-sizing: border-box;
+		/* position: static; is already set in the main 767px block */
+		/* Add any other specific adjustments for static header if needed */
+		justify-content: center;
+		/* Center items in static header */
+		padding-top: 15px;
+		/* Add more padding when static */
+		padding-bottom: 15px;
+		z-index: 1002;
+		/* Ensure header is above other fixed elements */
 	}
 
 	/* Adjusting VolunteerNameInput specific styles if it\'s part of .header */
@@ -772,6 +877,8 @@ body {
 		padding-top: 15px;
 		/* Add more padding when static */
 		padding-bottom: 15px;
+		z-index: 1001;
+		/* Ensure header is above other fixed elements if any confusion */
 	}
 
 	.header input {
@@ -781,24 +888,8 @@ body {
 	}
 }
 
-.stats-box {
-	position: fixed;
-	top: 60px;
-	/* Default, might be overridden */
-	left: 10px;
-	/* Default, might be overridden */
-	background-color: #ffffff;
-	border: 1px solid #ccc;
-	border-radius: 8px;
-	padding: 15px;
-	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-	width: 200px;
-	/* Default width */
-	text-align: center;
-	z-index: 999;
-	/* Ensure it's below header but above other content if overlapping */
-	box-sizing: border-box;
-}
+/* Grid layout will manage positions; avoid local fixed overrides here */
+
 
 /* מצב חיפוש פעיל */
 .container.search-active {
@@ -1109,5 +1200,65 @@ button:hover {
 
 .toggle-results-button:hover {
 	background-color: #5a6268;
+}
+
+/* Popup styles */
+.popup-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: rgba(0, 0, 0, 0.45);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 3000;
+	/* Above header/admin */
+}
+
+.popup-content {
+	background: #ffffff;
+	border-radius: 8px;
+	padding: 20px 24px;
+	width: min(90%, 420px);
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+	direction: rtl;
+	text-align: right;
+	position: relative;
+	border: 1px solid #dee2e6;
+}
+
+.popup-content h3 {
+	margin: 0 0 10px 0;
+	color: #343a40;
+}
+
+.popup-content p {
+	margin: 6px 0;
+	font-size: 16px;
+	color: #212529;
+}
+
+.popup-countdown {
+	color: #6c757d;
+	font-size: 14px;
+}
+
+.popup-close {
+	position: absolute;
+	top: 8px;
+	left: 8px;
+	/* RTL close on left */
+	background: transparent;
+	border: none;
+	font-size: 22px;
+	line-height: 1;
+	cursor: pointer;
+	color: #333;
+}
+
+.popup-close:hover {
+	color: #000;
 }
 </style>
