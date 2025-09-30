@@ -80,7 +80,7 @@
 						<li><strong>מספר ילדים נשואים:</strong> {{ formatValue(result.married_children) }}</li>
 						<li><strong>סך הכל ילדים:</strong> {{ formatValue(result.total_children) }}</li>
 						<li v-if="result.received"><strong>שם מתנדב שנתן:</strong> {{ formatValue(result.volunteer_name)
-							}}
+						}}
 						</li>
 						<li v-if="result.received"><strong>שעת קבלה:</strong> {{ formatTime(result.received_time) }}
 						</li>
@@ -121,24 +121,14 @@
 
 			<!-- קומפוננטת כלי הניהול -->
 			<AdminPanel :base-url="baseURL" />
-		</div>
-		<!-- קומפוננטת פרטי הלקוח האחרון -->
+		<!-- קומפוננטת פרטי הלקוח האחרון (חלק מהגריד) -->
 		<LastReceived :last-received="lastReceived" />
 		<!-- קומפוננטת רישום לקוח חדש -->
 		<div class="add-customer">
 			<RegisterCustomer :base-url="baseURL" :volunteer_name="volunteerName" />
 		</div>
-
-		<!-- Popup: grape juice cards notice -->
-		<div v-if="false" class="popup-overlay" @click.self="closeJuicePopup">
-			<div class="popup-content" role="dialog" aria-modal="true">
-				<button class="popup-close" @click="closeJuicePopup" aria-label="סגור">×</button>
-				<h3>שים לב</h3>
-				<p>לתת 2 כרטיסים של מיץ ענבים</p>
-				<p class="popup-countdown">החלון ייסגר אוטומטית בעוד {{ juiceSecondsLeft }} שניות</p>
-			</div>
-		</div>
-	</div>
+	</div> <!-- end layout-grid -->
+</div>
 </template>
 
 <script>

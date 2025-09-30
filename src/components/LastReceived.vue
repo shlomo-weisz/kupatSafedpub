@@ -23,15 +23,15 @@ export default {
 
 <style scoped>
 .last-received-box {
-    position: fixed;
-    top: 240px; /* הורדנו את הקומפוננטה למטה יותר */
-    left: 20px; /* צמוד לשמאל */
+    position: static; /* allow normal flow to avoid overlap with sticky stats */
+    margin: 16px auto; /* center in available width */
     background-color: #f9f9f9; /* רקע אפור בהיר */
     border: 1px solid #ddd; /* גבול אפור עדין */
     border-radius: 12px; /* פינות מעוגלות */
     padding: 15px; /* ריווח פנימי */
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* צל עדין */
-    width: 300px; /* רוחב הקומפוננטה */
+    width: 100%; /* take container width */
+    max-width: 300px; /* cap to a compact card */
     font-family: Arial, sans-serif; /* גופן מודרני */
     text-align: right; /* יישור לימין */
 }
