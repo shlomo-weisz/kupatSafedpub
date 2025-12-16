@@ -121,14 +121,14 @@
 
 			<!-- קומפוננטת כלי הניהול -->
 			<AdminPanel :base-url="baseURL" />
-		<!-- קומפוננטת פרטי הלקוח האחרון (חלק מהגריד) -->
-		<LastReceived :last-received="lastReceived" />
-		<!-- קומפוננטת רישום לקוח חדש -->
-		<div class="add-customer">
-			<RegisterCustomer :base-url="baseURL" :volunteer_name="volunteerName" />
-		</div>
-	</div> <!-- end layout-grid -->
-</div>
+			<!-- קומפוננטת פרטי הלקוח האחרון (חלק מהגריד) -->
+			<LastReceived :last-received="lastReceived" />
+			<!-- קומפוננטת רישום לקוח חדש -->
+			<div class="add-customer">
+				<RegisterCustomer :base-url="baseURL" :volunteer_name="volunteerName" />
+			</div>
+		</div> <!-- end layout-grid -->
+	</div>
 </template>
 
 <script>
@@ -572,8 +572,14 @@ body {
 /* Ensure children take full column width */
 .layout-grid .admin-panel,
 .layout-grid .stats-box,
-.layout-grid .container {
+.layout-grid .container,
+.layout-grid .add-customer {
 	width: 100%;
+}
+
+/* Make add-customer span full width */
+.layout-grid>.add-customer {
+	grid-column: 1 / -1;
 }
 
 /* Tweak columns on medium screens */

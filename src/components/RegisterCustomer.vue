@@ -8,7 +8,7 @@
 			<!-- שדה קוד מנהל -->
 			<div v-if="!isAdminCodeValid" class="form-group">
 				<label for="adminCode">קוד מנהל:</label>
-				<input type="password" id="adminCode" v-model="adminCode" @keydown.enter="checkPass"/>
+				<input type="password" id="adminCode" v-model="adminCode" @keydown.enter="checkPass" />
 				<p v-if="adminCodeError" class="error-message">קוד מנהל שגוי!</p>
 				<button @click="checkPass" class="submit-button">אמת קוד</button>
 			</div>
@@ -318,10 +318,10 @@ export default {
 	padding: 20px;
 	border-radius: 8px;
 	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-	max-width: 50%;
+	max-width: 1000px;
 	/* מגביל את הרוחב המקסימלי של הטופס */
-	width: 90%;
-	/* הטופס יתפוס 90% מרוחב המסך */
+	width: 95%;
+	/* הטופס יתפוס 95% מרוחב המסך */
 }
 
 .form-columns {
@@ -332,6 +332,18 @@ export default {
 	gap: 20px;
 	/* ריווח בין השדות */
 	margin-bottom: 20px;
+}
+
+@media (max-width: 768px) {
+	.form-columns {
+		grid-template-columns: 1fr;
+	}
+
+	.form-container {
+		margin: 20px auto;
+		width: 100%;
+		max-width: 100%;
+	}
 }
 
 .form-group {
