@@ -13,6 +13,13 @@
     </noscript>
     <div id="app"></div>
     <script src="<%= BASE_URL %>runtime-config.js"></script>
+    <script>
+      window.__APP_CONFIG__ = Object.assign({}, window.__APP_CONFIG__ || {}, {
+        VUE_APP_API_BASE_URL:
+          (window.__APP_CONFIG__ && window.__APP_CONFIG__.VUE_APP_API_BASE_URL) ||
+          <%= JSON.stringify(VUE_APP_API_BASE_URL || "") %>,
+      });
+    </script>
     <!-- built files will be auto injected -->
   </body>
 </html>
