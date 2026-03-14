@@ -11,19 +11,19 @@
 בקובץ הזה הגדירי:
 
 ```env
-VUE_APP_API_BASE_URL=https://your-server-domain
+VUE_APP_API_URL=https://your-server-domain
 ```
 
 אם השרת נמצא תחת path כמו `/api`, הגדירי:
 
 ```env
-VUE_APP_API_BASE_URL=https://your-server-domain/api
+VUE_APP_API_URL=https://your-server-domain/api
 ```
 
 ## משתנים נפוצים
 
 ```env
-VUE_APP_API_BASE_URL=https://your-server-domain
+VUE_APP_API_URL=https://your-server-domain
 CLIENT_PORT=8090
 ```
 
@@ -48,4 +48,4 @@ docker compose down
 
 ## הערה
 
-אם משנים את `VUE_APP_API_BASE_URL`, מספיק להרים מחדש את הקונטיינר של הלקוח. הקונטיינר מייצר `runtime-config.js` בזמן העלייה.
+אם משנים את `VUE_APP_API_URL`, מספיק להרים מחדש את הקונטיינר של הלקוח. הקונטיינר מייצר `runtime-config.js` בזמן העלייה.

@@ -17,11 +17,18 @@ function getRuntimeApiBaseUrl() {
 		return "";
 	}
 
-	return window.__APP_CONFIG__.VUE_APP_API_BASE_URL || "";
+	return (
+		window.__APP_CONFIG__.VUE_APP_API_URL ||
+		window.__APP_CONFIG__.VUE_APP_API_BASE_URL ||
+		""
+	);
 }
 
 const API_BASE_URL = normalizeApiBaseUrl(
-	getRuntimeApiBaseUrl() || process.env.VUE_APP_API_BASE_URL || "/api"
+	getRuntimeApiBaseUrl() ||
+		process.env.VUE_APP_API_URL ||
+		process.env.VUE_APP_API_BASE_URL ||
+		"/api"
 );
 
 function buildApiUrl(path = "") {
