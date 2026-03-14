@@ -3,6 +3,7 @@ import HomePage from "./components/HomePage.vue";
 import AnotherPage from "./components/AnotherPage.vue";
 import SportLiveMatches from "./components/SportLiveMatches.vue";
 import AdminWorkspace from "./components/AdminWorkspace.vue";
+import IdCameraCheckin from "./components/IdCameraCheckin.vue";
 
 const routes = [
 	{
@@ -14,6 +15,11 @@ const routes = [
 		path: "/admin",
 		name: "AdminWorkspace",
 		component: AdminWorkspace,
+	},
+	{
+		path: "/scan-id",
+		name: "IdCameraCheckin",
+		component: IdCameraCheckin,
 	},
 	{
 		path: "/page",
