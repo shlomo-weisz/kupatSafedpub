@@ -1,0 +1,10 @@
+services:
+  client:
+    build:
+      context: .
+      dockerfile: Dockerfile.standalone
+    env_file:
+      - .env.docker
+    restart: unless-stopped
+    ports:
+      - "${CLIENT_PORT:-8090}:80"

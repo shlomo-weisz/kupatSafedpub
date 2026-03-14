@@ -17,7 +17,7 @@ export default {
 			required: true,
 		},
 		percentageTaken: {
-			type: Number,
+			type: [Number, String],
 			required: true,
 		},
 		totalCustomers: {
