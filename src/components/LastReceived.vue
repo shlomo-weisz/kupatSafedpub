@@ -1,12 +1,15 @@
 <template>
 	<div class="last-received-box" v-if="lastReceived">
-		<h3>פרטי הלקוח האחרון</h3>
-		<p><strong>שם משפחה:</strong> {{ lastReceived.last_name }}</p>
-		<p><strong>שם האב:</strong> {{ lastReceived.father_first_name }}</p>
-		<p><strong>שם האם:</strong> {{ lastReceived.mother_first_name }}</p>
-		<p><strong>ילדים נשואים:</strong> {{ lastReceived.married_children }}</p>
-		<p><strong>ילדים לא נשואים:</strong> {{ lastReceived.unmarried_children }}</p>
-		<p><strong>סה"כ ילדים:</strong> {{ lastReceived.total_children }}</p>
+		<p class="last-received-eyebrow">התקבל לאחרונה</p>
+		<h3>הלקוח האחרון שסומן</h3>
+		<ul class="last-received-list">
+			<li><strong>שם משפחה</strong><span>{{ lastReceived.last_name }}</span></li>
+			<li><strong>שם האב</strong><span>{{ lastReceived.father_first_name }}</span></li>
+			<li><strong>שם האם</strong><span>{{ lastReceived.mother_first_name }}</span></li>
+			<li><strong>ילדים נשואים</strong><span>{{ lastReceived.married_children }}</span></li>
+			<li><strong>ילדים לא נשואים</strong><span>{{ lastReceived.unmarried_children }}</span></li>
+			<li><strong>סה"כ ילדים</strong><span>{{ lastReceived.total_children }}</span></li>
+		</ul>
 	</div>
 </template>
 
@@ -15,7 +18,7 @@ export default {
 	props: {
 		lastReceived: {
 			type: Object,
-			required: false, // יכול להיות ריק אם אין נתונים
+			required: false,
 		},
 	},
 };
@@ -23,78 +26,73 @@ export default {
 
 <style scoped>
 .last-received-box {
-	position: static;
-	/* allow normal flow to avoid overlap with sticky stats */
-	margin: 16px auto;
-	/* center in available width */
-	background-color: #f9f9f9;
-	/* רקע אפור בהיר */
-	border: 1px solid #ddd;
-	/* גבול אפור עדין */
-	border-radius: 12px;
-	/* פינות מעוגלות */
-	padding: 15px;
-	/* ריווח פנימי */
-	box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-	/* צל עדין */
+	margin: 18px 0 0;
+	background: rgba(255, 253, 248, 0.86);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-lg);
+	padding: 22px;
+	box-shadow: var(--shadow-soft);
 	width: 100%;
-	/* take container width */
-	max-width: 300px;
-	/* cap to a compact card */
-	font-family: Arial, sans-serif;
-	/* גופן מודרני */
 	text-align: right;
-	/* יישור לימין */
+	backdrop-filter: blur(16px);
+}
+
+.last-received-eyebrow {
+	margin: 0 0 8px;
+	font-size: 12px;
+	font-weight: 800;
+	letter-spacing: 0.12em;
+	color: var(--color-accent);
 }
 
 .last-received-box h3 {
-	margin: 0 0 10px;
-	/* ריווח מתחת לכותרת */
-	font-size: 18px;
-	/* גודל טקסט של הכותרת */
-	color: #333;
-	/* צבע טקסט כהה */
-	font-weight: bold;
-	/* טקסט מודגש */
+	margin: 0 0 16px;
+	font-size: 22px;
+	color: var(--color-primary);
 }
 
-.last-received-box p {
-	margin: 5px 0;
-	/* ריווח בין הפסקאות */
-	font-size: 14px;
-	/* גודל טקסט של הפסקאות */
-	color: #555;
-	/* צבע טקסט אפור כהה */
+.last-received-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: grid;
+	gap: 10px;
+}
+
+.last-received-list li {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 12px;
+	padding: 12px 14px;
+	border-radius: 16px;
+	background: rgba(255, 255, 255, 0.66);
 	direction: rtl;
+	color: var(--color-text-muted);
 }
 
-/* רספונסיביות למסכים קטנים */
+.last-received-list strong {
+	font-size: 13px;
+	color: var(--color-primary);
+}
+
+.last-received-list span {
+	font-size: 15px;
+	font-weight: 700;
+	color: var(--color-primary);
+}
+
 @media (max-width: 768px) {
 	.last-received-box {
-		position: static;
-		/* הסרת המיקום הקבוע */
-		transform: none;
-		/* ביטול ההזזה */
-		width: 90%;
-		/* התאמה לרוחב המסך */
-		margin: 20px auto;
-		/* מיקום במרכז */
-		box-shadow: none;
-		/* הסרת הצל */
-		border: 1px solid #ccc;
-		/* מסגרת פשוטה */
-		padding: 15px;
-		/* ריווח פנימי */
+		padding: 18px;
 	}
 
 	.last-received-box h3 {
-		font-size: 16px;
-		/* גודל טקסט קטן יותר */
+		font-size: 20px;
 	}
 
-	.last-received-box p {
-		font-size: 14px;
-		/* גודל טקסט קטן יותר */
+	.last-received-list li {
+		padding: 10px 12px;
 	}
 }
 </style>

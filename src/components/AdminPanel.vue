@@ -1,8 +1,9 @@
 <template>
 	<div class="admin-panel">
 		<div class="menu-section">
-			<h3>ניהול</h3>
-			<p>לניהול טבלאות, טעינת CSV ובחירת הסט הפעיל.</p>
+			<p class="panel-eyebrow">כלי מערכת</p>
+			<h3>מסך ניהול</h3>
+			<p>טבלאות פעילות, טעינות קבצים, דוחות, סיסמאות והגדרות שרת.</p>
 			<button @click="$router.push('/admin')">פתח מסך ניהול</button>
 		</div>
 	</div>
@@ -17,53 +18,59 @@ export default {
 <style scoped>
 .admin-panel {
 	position: sticky;
-	top: 90px;
-	background-color: #f9f9f9;
-	border: 1px solid #ddd;
-	border-radius: 12px;
-	padding: 20px;
-	box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-	width: 250px;
-	font-family: Arial, sans-serif;
-	text-align: center;
+	top: 108px;
+	background: var(--color-surface);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-lg);
+	padding: 22px;
+	box-shadow: var(--shadow-soft);
+	width: 100%;
+	text-align: right;
 	direction: rtl;
 	z-index: 2;
+	backdrop-filter: blur(16px);
+}
+
+.panel-eyebrow {
+	margin: 0 0 8px;
+	font-size: 12px;
+	font-weight: 800;
+	letter-spacing: 0.12em;
+	color: var(--color-accent);
 }
 
 .menu-section h3 {
-	margin-bottom: 10px;
-	font-size: 18px;
-	color: #333;
+	margin: 0 0 10px;
+	font-size: 24px;
+	color: var(--color-primary);
 }
 
 .menu-section p {
-	color: #555;
+	color: var(--color-text-muted);
 	line-height: 1.6;
-	margin-bottom: 14px;
+	margin: 0 0 16px;
 }
 
 button {
 	width: 100%;
-	padding: 10px;
-	background-color: #17342d;
-	color: white;
-	border: none;
-	border-radius: 999px;
+	padding: 14px 16px;
+	background: linear-gradient(135deg, var(--color-primary), #21493f);
+	color: #fffaf1;
+	border: 1px solid rgba(255, 255, 255, 0.16);
+	border-radius: var(--radius-pill);
 	cursor: pointer;
-	font-size: 14px;
+	font-size: 15px;
+	font-weight: 800;
 }
 
 button:hover {
-	background-color: #0f241f;
+	background: linear-gradient(135deg, var(--color-primary-hover), var(--color-primary));
 }
 
 @media (max-width: 768px) {
 	.admin-panel {
 		position: static;
-		width: 100%;
-		margin: 20px auto;
-		box-shadow: none;
-		border: 1px solid #ccc;
+		padding: 18px;
 	}
 }
 </style>

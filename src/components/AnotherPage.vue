@@ -1,6 +1,8 @@
 <template>
-	<div class="container">
-		<div class="box">
+	<div class="tool-shell">
+		<div class="container">
+			<div class="box">
+				<p class="page-eyebrow">כלי עזר</p>
 			<h2>הורדת קישור מיוטיוב</h2>
 
 			<!-- תיבת בחירה בין שרתים -->
@@ -28,6 +30,7 @@
 				<p>הקישור להורדה מוכן:</p>
 				<a :href="downloadLink" target="_blank">הורד כאן</a>
 				<p> תזכורת: הקישור ימחק בעוד שעה<br> צרו לעצמכם עותק או תורידו את הקובץ</p>
+			</div>
 			</div>
 		</div>
 	</div>
@@ -161,71 +164,100 @@ export default {
 </script>
 
 <style scoped>
+.tool-shell {
+	min-height: 100vh;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 24px 16px;
+}
+
 .container {
-	max-width: 500px;
-	margin: 0 auto;
-	padding: 20px;
-	border: 1px solid #ccc;
-	border-radius: 10px;
-	background-color: #f9f9f9;
-	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+	width: min(100%, 640px);
+	padding: 28px;
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-lg);
+	background:
+		linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 249, 241, 0.9));
+	box-shadow: var(--shadow-medium);
+	backdrop-filter: blur(18px);
+	direction: rtl;
 }
 
 .box {
 	display: flex;
 	flex-direction: column;
-	gap: 15px;
+	gap: 16px;
+}
+
+.page-eyebrow {
+	margin: 0;
+	font-size: 12px;
+	font-weight: 800;
+	letter-spacing: 0.14em;
+	color: var(--color-accent);
+}
+
+h2 {
+	margin: 0;
+	font-size: clamp(2rem, 4vw, 2.6rem);
+	color: var(--color-primary);
 }
 
 label {
-	font-weight: bold;
+	font-weight: 800;
+	color: var(--color-primary);
 }
 
 input,
 select {
-	padding: 10px;
-	border: 1px solid #ccc;
-	border-radius: 5px;
-	width: 90%;
+	padding: 14px 16px;
+	width: 100%;
 }
 
 button {
-	padding: 10px 15px;
-	background-color: #007bff;
+	padding: 14px 18px;
+	background: linear-gradient(135deg, var(--color-primary), #21493f);
 	color: white;
-	border: none;
-	border-radius: 5px;
+	border: 1px solid rgba(255, 255, 255, 0.16);
+	border-radius: var(--radius-pill);
 	cursor: pointer;
+	font-weight: 800;
 }
 
 button:hover {
-	background-color: #0056b3;
+	background: linear-gradient(135deg, var(--color-primary-hover), #17342d);
 }
 
 .progress {
-	margin-top: 20px;
-	padding: 10px;
-	border: 1px solid #ffc107;
-	border-radius: 5px;
-	background-color: #fff3cd;
+	padding: 16px;
+	border: 1px solid rgba(173, 106, 31, 0.18);
+	border-radius: 18px;
+	background-color: rgba(173, 106, 31, 0.1);
 	color: #856404;
 }
 
 .result {
-	margin-top: 20px;
-	padding: 10px;
-	border: 1px solid #28a745;
-	border-radius: 5px;
-	background-color: #d4edda;
+	padding: 16px;
+	border: 1px solid rgba(47, 125, 89, 0.18);
+	border-radius: 18px;
+	background-color: rgba(47, 125, 89, 0.1);
 	color: #155724;
 }
 
 a {
-	color: #007bff;
+	color: var(--color-accent);
 	text-decoration: none;
+	font-weight: 800;
 }
 
 a:hover {
 	text-decoration: underline;
+}
+
+@media (max-width: 640px) {
+	.container {
+		padding: 20px 18px;
+	}
 }
 </style>

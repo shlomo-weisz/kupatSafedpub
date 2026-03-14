@@ -1,11 +1,21 @@
-<!-- filepath: c:\networks\kupat\my-vue-app\src\components\StatsBox.vue -->
 <template>
 	<div class="stats-box">
-		<h3>סטטיסטיקות</h3>
-		<p>מספר אנשים שלקחו: <span class="highlight">{{ totalTaken }}</span> </p>
-		<p>מתוך: <span class="highlight">{{ totalCustomers }}</span></p>
-		<p>אחוזים: <span class="highlight">{{ percentageTaken }}%</span></p>
-
+		<p class="stats-eyebrow">נתוני חלוקה</p>
+		<h3>סטטוס בזמן אמת</h3>
+		<div class="stats-grid">
+			<div class="stat-item">
+				<span class="stat-label">קיבלו</span>
+				<strong class="stat-value">{{ totalTaken }}</strong>
+			</div>
+			<div class="stat-item">
+				<span class="stat-label">מתוך</span>
+				<strong class="stat-value">{{ totalCustomers }}</strong>
+			</div>
+			<div class="stat-item accent">
+				<span class="stat-label">אחוז חלוקה</span>
+				<strong class="stat-value">{{ percentageTaken }}%</strong>
+			</div>
+		</div>
 	</div>
 </template>
 
@@ -25,52 +35,71 @@ export default {
 			required: true,
 		},
 	},
-
 };
 </script>
 
 <style scoped>
 .stats-box {
 	position: sticky;
-	top: 90px;
-	/* stays below volunteer header */
-	left: auto;
-	background-color: #f9f9f9;
-	/* רקע אפור בהיר */
-	border: 1px solid #ddd;
-	/* גבול אפור עדין */
-	border-radius: 12px;
-	/* פינות מעוגלות */
-	padding: 20px;
-	/* ריווח פנימי */
-	box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-	/* צל עדין */
-	width: 300px;
-	/* רוחב הקומפוננטה */
-	text-align: center;
-	/* יישור טקסט למרכז */
-	font-family: Arial, sans-serif;
-	/* גופן מודרני */
+	top: 108px;
+	background: var(--color-surface);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-lg);
+	padding: 22px;
+	box-shadow: var(--shadow-soft);
+	width: 100%;
+	text-align: right;
 	z-index: 2;
+	backdrop-filter: blur(16px);
 }
 
-/* רספונסיביות למסכים קטנים */
+.stats-eyebrow {
+	margin: 0 0 8px;
+	font-size: 12px;
+	font-weight: 800;
+	letter-spacing: 0.12em;
+	color: var(--color-accent);
+}
+
+.stats-box h3 {
+	margin: 0 0 18px;
+	font-size: 24px;
+	color: var(--color-primary);
+}
+
+.stats-grid {
+	display: grid;
+	gap: 12px;
+}
+
+.stat-item {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 14px 16px;
+	border-radius: 18px;
+	background: rgba(255, 255, 255, 0.62);
+	border: 1px solid rgba(24, 53, 46, 0.08);
+}
+
+.stat-item.accent {
+	background: rgba(194, 107, 67, 0.12);
+}
+
+.stat-label {
+	color: var(--color-text-muted);
+	font-weight: 700;
+}
+
+.stat-value {
+	font-size: 24px;
+	color: var(--color-primary);
+}
+
 @media (max-width: 768px) {
 	.stats-box {
 		position: static;
-		/* הסרת המיקום הקבוע */
-		transform: none;
-		/* ביטול ההזזה */
-		width: 100%;
-		/* התאמה לרוחב המסך */
-		margin: 20px auto;
-		/* מיקום במרכז */
-		box-shadow: none;
-		/* הסרת הצל */
-		border: 1px solid #ccc;
-		/* מסגרת פשוטה */
-		padding: 15px;
-		/* ריווח פנימי גדול יותר */
+		padding: 18px;
 	}
 }
 </style>

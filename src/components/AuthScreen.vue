@@ -1,6 +1,7 @@
 <template>
 	<div class="auth-container">
 		<div class="auth-box">
+			<p class="auth-eyebrow">גישה מוגנת</p>
 			<h2 class="auth-title">גישה מוגנת</h2>
 			<p class="auth-subtitle">אנא הזן את הסיסמה כדי לגשת לתוכן</p>
 
@@ -79,29 +80,44 @@ export default {
 	justify-content: center;
 	align-items: center;
 	min-height: 100vh;
-	background: linear-gradient(to bottom right, #3498db, #8e44ad);
+	background:
+		radial-gradient(circle at top right, rgba(194, 107, 67, 0.22), transparent 30%),
+		radial-gradient(circle at top left, rgba(47, 125, 89, 0.16), transparent 32%),
+		linear-gradient(180deg, rgba(248, 242, 232, 0.96), rgba(237, 231, 220, 0.96));
 	direction: rtl;
+	padding: 20px;
 }
 
 .auth-box {
 	width: 90%;
-	max-width: 400px;
-	background-color: white;
-	border-radius: 10px;
-	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+	max-width: 430px;
+	background: rgba(255, 255, 255, 0.9);
+	border-radius: var(--radius-lg);
+	box-shadow: var(--shadow-medium);
+	border: 1px solid var(--color-border);
 	padding: 30px;
-	text-align: center;
+	text-align: right;
+	backdrop-filter: blur(18px);
+}
+
+.auth-eyebrow {
+	margin: 0 0 8px;
+	font-size: 12px;
+	font-weight: 800;
+	letter-spacing: 0.14em;
+	color: var(--color-accent);
 }
 
 .auth-title {
 	font-size: 1.8rem;
-	margin-bottom: 10px;
-	color: #2c3e50;
+	margin: 0 0 10px;
+	color: var(--color-primary);
 }
 
 .auth-subtitle {
-	color: #7f8c8d;
+	color: var(--color-text-muted);
 	margin-bottom: 25px;
+	line-height: 1.7;
 }
 
 .form-group {
@@ -112,44 +128,35 @@ export default {
 .form-group label {
 	display: block;
 	margin-bottom: 5px;
-	font-weight: bold;
-	color: #34495e;
+	font-weight: 800;
+	color: var(--color-primary);
 }
 
 .password-input {
 	width: 100%;
 	padding: 12px 15px;
-	border: 1px solid #ddd;
-	border-radius: 5px;
 	font-size: 16px;
-	transition: border-color 0.3s;
-}
-
-.password-input:focus {
-	outline: none;
-	border-color: #3498db;
-	box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.3);
 }
 
 .auth-button {
 	width: 100%;
-	padding: 12px;
-	background-color: #3498db;
+	padding: 14px 16px;
+	background: linear-gradient(135deg, var(--color-primary), #21493f);
 	color: white;
-	border: none;
-	border-radius: 5px;
+	border: 1px solid rgba(255, 255, 255, 0.16);
+	border-radius: var(--radius-pill);
 	font-size: 16px;
-	font-weight: bold;
+	font-weight: 800;
 	cursor: pointer;
-	transition: background-color 0.3s;
 }
 
 .auth-button:hover {
-	background-color: #2980b9;
+	background: linear-gradient(135deg, var(--color-primary-hover), #17342d);
 }
 
 .error-message {
-	color: #e74c3c;
+	color: var(--color-danger);
 	margin-top: 15px;
+	font-weight: 700;
 }
 </style>

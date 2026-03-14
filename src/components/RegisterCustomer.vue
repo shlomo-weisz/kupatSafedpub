@@ -1,30 +1,46 @@
 <template>
-	<div>
+	<div class="register-shell">
 		<button
 			@click="toggleForm"
 			:class="showForm ? 'close-form-button' : 'open-form-button'"
+			class="register-toggle"
 		>
 			{{ showForm ? "סגור טופס" : "רישום לקוח חדש" }}
 		</button>
 
 		<div v-if="showForm" class="form-container">
-			<div v-if="!isRegisterAuthenticated" class="form-group">
-				<label for="registerPassword">סיסמת רישום:</label>
-				<input
-					id="registerPassword"
-					v-model="registerPassword"
-					type="password"
-					@keydown.enter="authenticateRegisterRole"
-				/>
+			<div v-if="!isRegisterAuthenticated" class="register-auth-card">
+				<p class="section-eyebrow">גישה מאובטחת</p>
+				<h2>אימות רישום</h2>
+				<p class="section-copy">
+					לפני רישום לקוח חדש יש להזין את סיסמת הרישום.
+				</p>
+				<div class="form-group">
+					<label for="registerPassword">סיסמת רישום</label>
+					<input
+						id="registerPassword"
+						v-model="registerPassword"
+						type="password"
+						autocomplete="current-password"
+						@keydown.enter="authenticateRegisterRole"
+					/>
+				</div>
 				<p v-if="registerError" class="error-message">{{ registerError }}</p>
 				<button @click="authenticateRegisterRole" class="submit-button">
 					אמת סיסמה
 				</button>
 			</div>
 
-			<div v-else>
-				<h2>רישום לקוח חדש</h2>
-				<div class="form-group">
+			<div v-else class="register-content">
+				<div class="register-header">
+					<p class="section-eyebrow">רישום קופה</p>
+					<h2>רישום לקוח חדש</h2>
+					<p class="section-copy">
+						מלאו את הפרטים הנדרשים, בחרו האם מדובר בלקיחה מיידית או ברשימת
+						המתנה, ושלחו את הרשומה למערכת.
+					</p>
+				</div>
+				<div class="form-group preference-row">
 					<div class="radio-group-container">
 						<div class="radio-buttons">
 							<label>
@@ -56,20 +72,27 @@
 					</div>
 				</div>
 
-				<form @submit.prevent="registerCustomer">
-					<div class="form-group">
-						<label for="lastName">שם משפחה:</label>
-						<input id="lastName" v-model="customer.lastName" type="text" required />
-					</div>
-					<div class="form-columns">
-						<div class="form-column">
+				<form class="register-form" @submit.prevent="registerCustomer">
+					<section class="form-section">
+						<div class="form-group">
+							<label for="lastName">שם משפחה</label>
+							<input id="lastName" v-model="customer.lastName" type="text" required />
+						</div>
+					</section>
+
+					<section class="form-section">
+						<div class="section-title-row">
+							<h3>פרטי ההורים</h3>
+						</div>
+						<div class="form-columns">
+							<div class="form-column">
 							<h3>פרטי האב</h3>
 							<div class="form-group">
-								<label for="fatherName">שם האב:</label>
+								<label for="fatherName">שם האב</label>
 								<input id="fatherName" v-model="customer.fatherName" type="text" />
 							</div>
 							<div class="form-group">
-								<label for="fatherId">מספר זהות של האב:</label>
+								<label for="fatherId">מספר זהות של האב</label>
 								<input
 									id="fatherId"
 									v-model="customer.fatherId"
@@ -78,109 +101,120 @@
 								/>
 							</div>
 							<div class="form-group">
-								<label for="fatherPhone">מספר טלפון של האב:</label>
+								<label for="fatherPhone">מספר טלפון של האב</label>
 								<input id="fatherPhone" v-model="customer.fatherPhone" type="text" />
 							</div>
-						</div>
+							</div>
 
-						<div class="form-column">
-							<h3>פרטי האם</h3>
-							<div class="form-group">
-								<label for="motherName">שם האם:</label>
-								<input id="motherName" v-model="customer.motherName" type="text" />
-							</div>
-							<div class="form-group">
-								<label for="motherId">מספר זהות של האם:</label>
-								<input id="motherId" v-model="customer.motherId" type="text" />
-							</div>
-							<div class="form-group">
-								<label for="motherPhone">מספר טלפון של האם:</label>
-								<input id="motherPhone" v-model="customer.motherPhone" type="text" />
+							<div class="form-column">
+								<h3>פרטי האם</h3>
+								<div class="form-group">
+									<label for="motherName">שם האם</label>
+									<input id="motherName" v-model="customer.motherName" type="text" />
+								</div>
+								<div class="form-group">
+									<label for="motherId">מספר זהות של האם</label>
+									<input id="motherId" v-model="customer.motherId" type="text" />
+								</div>
+								<div class="form-group">
+									<label for="motherPhone">מספר טלפון של האם</label>
+									<input id="motherPhone" v-model="customer.motherPhone" type="text" />
+								</div>
 							</div>
 						</div>
-					</div>
+					</section>
 
-					<div class="form-columns">
+					<section class="form-section">
 						<div class="form-group">
-							<label for="additionalPhone">טלפון נוסף:</label>
+							<label for="additionalPhone">טלפון נוסף</label>
 							<input
 								id="additionalPhone"
 								v-model="customer.additionalPhone"
 								type="text"
 							/>
 						</div>
-					</div>
+					</section>
 
-					<h3>כתובת</h3>
-					<div class="form-columns address-row">
-						<div class="form-group">
-							<label for="city">עיר:</label>
-							<input id="city" v-model="customer.address.city" type="text" />
+					<section class="form-section">
+						<div class="section-title-row">
+							<h3>כתובת</h3>
 						</div>
-						<div class="form-group">
-							<label for="street">רחוב:</label>
-							<input id="street" v-model="customer.address.street" type="text" />
-						</div>
-						<div class="form-group">
-							<label for="houseNumber">מספר בית:</label>
-							<input
-								id="houseNumber"
-								v-model="customer.address.houseNumber"
-								type="text"
-							/>
-						</div>
-						<div class="form-group">
-							<label for="apartment">מספר דירה:</label>
-							<input
-								id="apartment"
-								v-model="customer.address.apartment"
-								type="text"
-							/>
-						</div>
-						<div class="form-group">
-							<label for="entrance">כניסה:</label>
-							<input
-								id="entrance"
-								v-model="customer.address.entrance"
-								type="text"
-							/>
-						</div>
-						<div class="form-group">
-							<label for="floor">קומה:</label>
-							<input id="floor" v-model="customer.address.floor" type="text" />
-						</div>
-					</div>
-
-					<h3>מספר ילדים</h3>
-					<div class="form-columns">
-						<div class="form-column">
+						<div class="form-columns address-row">
 							<div class="form-group">
-								<label for="marriedChildren">מספר ילדים נשואים:</label>
+								<label for="city">עיר</label>
+								<input id="city" v-model="customer.address.city" type="text" />
+							</div>
+							<div class="form-group">
+								<label for="street">רחוב</label>
+								<input id="street" v-model="customer.address.street" type="text" />
+							</div>
+							<div class="form-group">
+								<label for="houseNumber">מספר בית</label>
 								<input
-									id="marriedChildren"
-									v-model.number="customer.marriedChildren"
-									type="number"
-									min="0"
+									id="houseNumber"
+									v-model="customer.address.houseNumber"
+									type="text"
 								/>
 							</div>
-						</div>
-						<div class="form-column">
 							<div class="form-group">
-								<label for="unmarriedChildren">מספר ילדים שאינם נשואים:</label>
+								<label for="apartment">מספר דירה</label>
 								<input
-									id="unmarriedChildren"
-									v-model.number="customer.unmarriedChildren"
-									type="number"
-									min="0"
+									id="apartment"
+									v-model="customer.address.apartment"
+									type="text"
 								/>
 							</div>
+							<div class="form-group">
+								<label for="entrance">כניסה</label>
+								<input
+									id="entrance"
+									v-model="customer.address.entrance"
+									type="text"
+								/>
+							</div>
+							<div class="form-group">
+								<label for="floor">קומה</label>
+								<input id="floor" v-model="customer.address.floor" type="text" />
+							</div>
 						</div>
-					</div>
+					</section>
 
-					<button type="submit" class="submit-button">שלח</button>
-					<button type="button" @click="closeForm" class="cancel-button">
-						ביטול
-					</button>
+					<section class="form-section">
+						<div class="section-title-row">
+							<h3>מספר ילדים</h3>
+						</div>
+						<div class="form-columns">
+							<div class="form-column">
+								<div class="form-group">
+									<label for="marriedChildren">מספר ילדים נשואים</label>
+									<input
+										id="marriedChildren"
+										v-model.number="customer.marriedChildren"
+										type="number"
+										min="0"
+									/>
+								</div>
+							</div>
+							<div class="form-column">
+								<div class="form-group">
+									<label for="unmarriedChildren">מספר ילדים שאינם נשואים</label>
+									<input
+										id="unmarriedChildren"
+										v-model.number="customer.unmarriedChildren"
+										type="number"
+										min="0"
+									/>
+								</div>
+							</div>
+						</div>
+					</section>
+
+					<div class="form-actions">
+						<button type="submit" class="submit-button">שלח</button>
+						<button type="button" @click="closeForm" class="cancel-button">
+							ביטול
+						</button>
+					</div>
 				</form>
 			</div>
 		</div>
@@ -315,156 +349,238 @@ export default {
 </script>
 
 <style>
+.register-shell {
+	display: grid;
+	gap: 18px;
+}
+
+.register-toggle {
+	width: 100%;
+}
+
 .open-form-button {
-	padding: 10px 20px;
-	background-color: #007bff;
-	color: white;
-	border: none;
-	border-radius: 4px;
+	padding: 16px 22px;
+	background: linear-gradient(135deg, var(--color-primary), #21493f);
+	color: #fffaf1;
+	border: 1px solid rgba(255, 255, 255, 0.16);
+	border-radius: var(--radius-pill);
 	cursor: pointer;
 	font-size: 16px;
-	transition: background-color 0.3s ease;
+	font-weight: 800;
 }
 
 .open-form-button:hover {
-	background-color: #0056b3;
+	background: linear-gradient(135deg, var(--color-primary-hover), #17342d);
 }
 
 .close-form-button {
-	padding: 10px 20px;
-	background-color: #dc3545;
-	color: white;
-	border: none;
-	border-radius: 4px;
+	padding: 16px 22px;
+	background: rgba(255, 255, 255, 0.74);
+	color: var(--color-primary);
+	border: 1px solid var(--color-border-strong);
+	border-radius: var(--radius-pill);
 	cursor: pointer;
 	font-size: 16px;
-	transition: background-color 0.3s ease;
+	font-weight: 800;
 }
 
 .close-form-button:hover {
-	background-color: #c82333;
+	background: rgba(24, 53, 46, 0.1);
 }
 
 .form-container {
 	direction: rtl;
-	margin: 50px auto;
-	background-color: white;
+	background:
+		linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 249, 241, 0.9));
+	padding: 24px;
+	border-radius: var(--radius-lg);
+	box-shadow: var(--shadow-soft);
+	border: 1px solid var(--color-border);
+	width: 100%;
+	backdrop-filter: blur(18px);
+}
+
+.register-auth-card,
+.register-content,
+.register-form {
+	display: grid;
+	gap: 18px;
+}
+
+.register-header {
+	display: grid;
+	gap: 10px;
+}
+
+.section-eyebrow {
+	margin: 0;
+	font-size: 12px;
+	font-weight: 800;
+	letter-spacing: 0.14em;
+	color: var(--color-accent);
+}
+
+.section-copy {
+	margin: 0;
+	color: var(--color-text-muted);
+	line-height: 1.7;
+}
+
+.register-content h2,
+.register-auth-card h2 {
+	margin: 0;
+	font-size: 30px;
+	color: var(--color-primary);
+}
+
+.form-section {
+	display: grid;
+	gap: 16px;
 	padding: 20px;
-	border-radius: 8px;
-	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-	max-width: 1000px;
-	width: 95%;
+	border-radius: 22px;
+	background: rgba(255, 255, 255, 0.56);
+	border: 1px solid rgba(24, 53, 46, 0.08);
+}
+
+.section-title-row h3 {
+	margin: 0;
+	font-size: 22px;
+	color: var(--color-primary);
 }
 
 .form-columns {
 	display: grid;
-	grid-template-columns: repeat(2, 1fr);
+	grid-template-columns: repeat(2, minmax(0, 1fr));
 	gap: 20px;
-	margin-bottom: 20px;
-}
-
-@media (max-width: 768px) {
-	.form-columns {
-		grid-template-columns: 1fr;
-	}
-
-	.form-container {
-		margin: 20px auto;
-		width: 100%;
-		max-width: 100%;
-	}
 }
 
 .form-group {
-	margin-bottom: 15px;
+	display: grid;
+	gap: 8px;
 }
 
 .form-group label {
 	display: block;
-	font-weight: bold;
-	margin-bottom: 5px;
+	font-weight: 800;
+	color: var(--color-primary);
 }
 
 .form-group input {
 	width: 100%;
-	padding: 8px;
-	border: 1px solid #ccc;
-	border-radius: 4px;
-	box-sizing: border-box;
+	padding: 14px 16px;
 }
 
 .submit-button {
-	padding: 10px 20px;
-	background-color: #28a745;
+	padding: 14px 18px;
+	background: linear-gradient(135deg, var(--color-success), #47a16f);
 	color: white;
-	border: none;
-	border-radius: 4px;
+	border: 1px solid rgba(255, 255, 255, 0.16);
+	border-radius: var(--radius-pill);
 	cursor: pointer;
 	font-size: 16px;
-	transition: background-color 0.3s ease;
 	width: 100%;
+	font-weight: 800;
 }
 
 .submit-button:hover {
-	background-color: #218838;
+	background: linear-gradient(135deg, #26684a, var(--color-success));
 }
 
 .cancel-button {
-	margin-top: 10px;
-	padding: 10px 20px;
-	background-color: #dc3545;
-	color: white;
-	border: none;
-	border-radius: 4px;
+	padding: 14px 18px;
+	background: rgba(255, 255, 255, 0.72);
+	color: var(--color-primary);
+	border: 1px solid var(--color-border-strong);
+	border-radius: var(--radius-pill);
 	cursor: pointer;
 	font-size: 16px;
-	transition: background-color 0.3s ease;
 	width: 100%;
+	font-weight: 800;
 }
 
 .cancel-button:hover {
-	background-color: #c82333;
+	background: rgba(24, 53, 46, 0.08);
 }
 
 .address-row {
-	display: flex;
-	gap: 20px;
-	flex-wrap: wrap;
-	direction: rtl;
-	justify-content: flex-start;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.address-row .form-group {
-	flex: 1 1 150px;
-	min-width: 150px;
+.form-actions {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 12px;
 }
 
 .error-message {
-	color: red;
+	color: var(--color-danger);
 	font-size: 14px;
-	margin-top: 5px;
+	margin: 0;
+	font-weight: 700;
 }
 
 .radio-group-container {
 	display: flex;
-	gap: 20px;
-	align-items: center;
+	gap: 16px;
+	align-items: stretch;
 }
 
 .radio-buttons,
 .checkbox-container {
-	border: 1px solid #ccc;
-	border-radius: 8px;
-	padding: 10px;
+	border: 1px solid rgba(24, 53, 46, 0.1);
+	border-radius: 18px;
+	padding: 14px 16px;
 	display: flex;
-	gap: 20px;
+	gap: 16px;
 	align-items: center;
+	background: rgba(255, 255, 255, 0.6);
+	flex-wrap: wrap;
+}
+
+.preference-row {
+	margin-bottom: 0;
+}
+
+.radio-buttons label,
+.checkbox-container label {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	margin: 0;
+	font-weight: 700;
+}
+
+.radio-buttons input,
+.checkbox-container input {
+	width: auto;
+	margin: 0;
+}
+
+.form-column h3 {
+	margin: 0 0 10px;
+	font-size: 20px;
+	color: var(--color-primary);
 }
 
 @media (max-width: 900px) {
 	.radio-group-container {
 		flex-direction: column;
 		align-items: stretch;
+	}
+
+	.form-columns,
+	.address-row,
+	.form-actions {
+		grid-template-columns: 1fr;
+	}
+
+	.form-container {
+		padding: 18px;
+	}
+
+	.register-content h2,
+	.register-auth-card h2 {
+		font-size: 26px;
 	}
 }
 </style>

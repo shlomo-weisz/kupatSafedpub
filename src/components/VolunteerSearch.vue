@@ -1,16 +1,19 @@
 <template>
-	<div>
+	<div class="search-experience">
 		<VolunteerNameInput
 			:value="volunteerName"
 			@update-volunteer-name="volunteerName = $event"
 		/>
 
 		<div class="layout-grid">
-			<StatsBox
-				:total-taken="totalTaken"
-				:percentage-taken="percentageTaken"
-				:total-customers="totalCustomers"
-			/>
+			<div class="layout-sidebar layout-sidebar--left">
+				<StatsBox
+					:total-taken="totalTaken"
+					:percentage-taken="percentageTaken"
+					:total-customers="totalCustomers"
+				/>
+				<LastReceived :last-received="lastReceived" />
+			</div>
 
 			<div
 				:class="[
@@ -18,79 +21,89 @@
 					result || lastNameResults.length > 0 ? 'results-active' : 'search-active',
 				]"
 			>
-				<h1>מערכת חלוקות קופת צפת</h1>
+				<div class="container-intro">
+					<p class="eyebrow">חיפוש, עדכון וחלוקה</p>
+					<h1>מערכת חלוקות קופת צפת</h1>
+					<p class="container-copy">
+						חיפוש מהיר לפי מספר זהות, טלפון או שם משפחה, עם גישה מיידית
+						לעדכון נתונים ורישום לקוח חדש.
+					</p>
+				</div>
 
-				<button
-					v-if="result || lastNameResults.length > 0"
-					@click="resetSearch"
-					class="back-button"
-				>
-					חזרה לחיפוש
-				</button>
+				<div v-if="result || lastNameResults.length > 0" class="result-toolbar">
+					<button @click="resetSearch" class="back-button">חזרה לחיפוש</button>
+				</div>
 
-				<div v-if="!result && lastNameResults.length === 0">
-					<div class="search-group">
-						<label for="idNumber">חיפוש לפי מספר זהות:</label>
-						<input
-							id="idNumber"
-							ref="idInput"
-							v-model="idNumber"
-							type="text"
-							:disabled="phoneActive || lastNameActive"
-							@input="disableOther('id')"
-							@keydown.enter="performSearch"
-						/>
+				<div v-if="!result && lastNameResults.length === 0" class="search-panel">
+					<div class="search-fields">
+						<div class="search-group">
+							<label for="idNumber">חיפוש לפי מספר זהות</label>
+							<input
+								id="idNumber"
+								ref="idInput"
+								v-model="idNumber"
+								type="text"
+								:disabled="phoneActive || lastNameActive"
+								@input="disableOther('id')"
+								@keydown.enter="performSearch"
+							/>
+						</div>
+
+						<div class="search-group">
+							<label for="phoneNumber">חיפוש לפי מספר טלפון</label>
+							<input
+								id="phoneNumber"
+								v-model="phoneNumber"
+								type="text"
+								:disabled="idActive || lastNameActive"
+								@input="disableOther('phone')"
+								@keydown.enter="performSearch"
+							/>
+						</div>
+
+						<div class="search-group">
+							<label for="lastName">חיפוש לפי שם משפחה</label>
+							<input
+								id="lastName"
+								v-model="lastName"
+								type="text"
+								:disabled="idActive || phoneActive"
+								@input="disableOther('lastName')"
+								@keydown.enter="performSearch"
+							/>
+						</div>
 					</div>
-
-					<div class="search-group">
-						<label for="phoneNumber">חיפוש לפי מספר טלפון:</label>
-						<input
-							id="phoneNumber"
-							v-model="phoneNumber"
-							type="text"
-							:disabled="idActive || lastNameActive"
-							@input="disableOther('phone')"
-							@keydown.enter="performSearch"
-						/>
+					<div class="search-actions">
+						<button
+							@click="performSearch"
+							:disabled="!idNumber && !phoneNumber && !lastName"
+						>
+							חפש
+						</button>
 					</div>
-
-					<div class="search-group">
-						<label for="lastName">חיפוש לפי שם משפחה:</label>
-						<input
-							id="lastName"
-							v-model="lastName"
-							type="text"
-							:disabled="idActive || phoneActive"
-							@input="disableOther('lastName')"
-							@keydown.enter="performSearch"
-						/>
-					</div>
-
-					<button
-						@click="performSearch"
-						:disabled="!idNumber && !phoneNumber && !lastName"
-					>
-						חפש
-					</button>
 				</div>
 
 				<div v-if="result" class="result-box">
 					<div v-if="!showUpdateForm">
 						<div class="result-header">
-							<button
-								v-if="!result.received"
-								@click="markReceived"
-								class="mark-button"
-							>
-								סמן כקיבל
-							</button>
-							<p v-if="result.received" class="received-message">הלקוח כבר קיבל</p>
-							<button @click="openUpdateForm" class="update-button">
-								עדכן נתונים
-							</button>
+							<div class="result-header-copy">
+								<h2>תוצאות חיפוש</h2>
+								<p>פרטי המשפחה כפי שהם שמורים במערכת הפעילה.</p>
+								<p v-if="result.received" class="received-message">הלקוח כבר קיבל</p>
+							</div>
+							<div class="result-header-actions">
+								<button
+									v-if="!result.received"
+									@click="markReceived"
+									class="mark-button"
+								>
+									סמן כקיבל
+								</button>
+								<button @click="openUpdateForm" class="update-button">
+									עדכן נתונים
+								</button>
+							</div>
 						</div>
-
-						<h2>תוצאות חיפוש</h2>
 						<ul class="result-list">
 							<li><strong>קהילה:</strong> {{ formatValue(result.comunity) }}</li>
 							<li><strong>שם משפחה:</strong> {{ formatValue(result.last_name) }}</li>
@@ -127,22 +140,29 @@
 					</div>
 
 					<div v-else class="update-form">
-						<h3>עדכון נתונים</h3>
-						<div
-							v-for="(value, key) in editableFields"
-							:key="key"
-							class="update-group"
-						>
-							<label :for="key">{{ translateField(key) }}:</label>
-							<input
-								:id="key"
-								v-model="editableFields[key]"
-								type="text"
-								:placeholder="translateField(key)"
-							/>
+						<div class="update-form-heading">
+							<h3>עדכון נתונים</h3>
+							<p>אפשר לשנות את השדות הרלוונטיים ולשמור את הנתונים המעודכנים.</p>
 						</div>
-						<button @click="updateCustomer">עדכן</button>
-						<button @click="closeUpdateForm" class="cancel-button">ביטול</button>
+						<div class="update-grid">
+							<div
+								v-for="(value, key) in editableFields"
+								:key="key"
+								class="update-group"
+							>
+								<label :for="key">{{ translateField(key) }}:</label>
+								<input
+									:id="key"
+									v-model="editableFields[key]"
+									type="text"
+									:placeholder="translateField(key)"
+								/>
+							</div>
+						</div>
+						<div class="update-actions">
+							<button @click="updateCustomer">עדכן</button>
+							<button @click="closeUpdateForm" class="cancel-button">ביטול</button>
+						</div>
 					</div>
 				</div>
 
@@ -150,16 +170,23 @@
 					v-if="(lastNameResults.length > 0 || lastNameSearchError) && !result"
 					class="result-box last-name-results"
 				>
-					<h2 v-if="lastNameResults.length > 0">
-						תוצאות חיפוש לפי שם משפחה: {{ lastName }}
-					</h2>
-					<button
-						v-if="lastNameResults.length > 0"
-						@click="toggleLastNameResults"
-						class="toggle-results-button"
-					>
-						{{ lastNameResultsVisible ? "הסתר תוצאות" : "הצג תוצאות" }}
-					</button>
+					<div class="result-header result-header--stacked">
+						<div class="result-header-copy">
+							<h2 v-if="lastNameResults.length > 0">
+								תוצאות חיפוש לפי שם משפחה: {{ lastName }}
+							</h2>
+							<p v-if="lastNameResults.length > 0">
+								אפשר לבחור תעודת זהות או טלפון מתוך הרשימה ולהמשיך ישר לחיפוש.
+							</p>
+						</div>
+						<button
+							v-if="lastNameResults.length > 0"
+							@click="toggleLastNameResults"
+							class="toggle-results-button"
+						>
+							{{ lastNameResultsVisible ? "הסתר תוצאות" : "הצג תוצאות" }}
+						</button>
+					</div>
 					<ul
 						v-if="lastNameResults.length > 0 && lastNameResultsVisible"
 						class="result-list"
@@ -214,8 +241,9 @@
 				</div>
 			</div>
 
-			<AdminPanel />
-			<LastReceived :last-received="lastReceived" />
+			<div class="layout-sidebar layout-sidebar--right">
+				<AdminPanel />
+			</div>
 
 			<div class="add-customer">
 				<RegisterCustomer :volunteer_name="volunteerName" />
@@ -284,6 +312,7 @@ export default {
 			lastNameResults: [],
 			lastNameSearchError: null,
 			lastNameResultsVisible: true,
+			juicePopupEnabled: false,
 			showJuicePopup: false,
 			juiceSecondsLeft: 6,
 			juicePopupIntervalId: null,
@@ -512,7 +541,7 @@ export default {
 				const res = await readJsonResponse(response);
 
 				const unmarried = parseInt(this.result?.unmarried_children, 10);
-				if (!Number.isNaN(unmarried) && unmarried >= 7) {
+				if (this.juicePopupEnabled && !Number.isNaN(unmarried) && unmarried >= 7) {
 					this.openJuicePopup();
 				}
 
@@ -640,369 +669,267 @@ export default {
 </script>
 
 <style>
-body {
-	background-color: #f0f4f8;
-	font-family: Arial, sans-serif;
-	margin: 0;
-	padding: 0;
-	-webkit-text-size-adjust: 100%;
-	text-size-adjust: 100%;
-}
-
-.container {
-	direction: rtl;
-	max-width: 1500px;
-	margin: 70px auto 20px;
-	text-align: center;
-	padding: 20px;
-	border: 1px solid #ccc;
-	border-radius: 8px;
-	background-color: #ffffff;
-	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-	box-sizing: border-box;
+.search-experience {
+	padding: 0 16px 12px;
 }
 
 .layout-grid {
 	display: grid;
-	grid-template-columns: 300px 1fr 280px;
-	gap: 16px;
+	grid-template-columns: minmax(250px, 280px) minmax(0, 1fr) minmax(250px, 280px);
+	gap: 20px;
 	align-items: start;
 	max-width: 1500px;
 	margin: 0 auto;
-	padding: 0 12px;
-	box-sizing: border-box;
 }
 
-.layout-grid .admin-panel,
-.layout-grid .stats-box,
-.layout-grid .container,
-.layout-grid .add-customer {
-	width: 100%;
+.layout-sidebar {
+	display: grid;
+	gap: 18px;
 }
 
-.layout-grid > .add-customer {
-	grid-column: 1 / -1;
+.container {
+	direction: rtl;
+	padding: 28px;
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-lg);
+	background:
+		linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 249, 241, 0.88));
+	box-shadow: var(--shadow-medium);
+	backdrop-filter: blur(20px);
+	text-align: right;
 }
 
-@media (max-width: 1200px) {
-	.layout-grid {
-		grid-template-columns: 260px 1fr;
-	}
-
-	.layout-grid > .admin-panel {
-		grid-column: 1 / -1;
-	}
+.container-intro {
+	display: grid;
+	gap: 10px;
 }
 
-@media (max-width: 900px) {
-	.layout-grid {
-		grid-template-columns: 1fr;
-	}
-
-	.layout-grid > .admin-panel,
-	.layout-grid > .stats-box,
-	.layout-grid > .container {
-		grid-column: 1 / -1;
-	}
+.eyebrow {
+	margin: 0;
+	font-size: 12px;
+	font-weight: 800;
+	letter-spacing: 0.14em;
+	color: var(--color-accent);
 }
 
-@media (max-width: 1200px) {
-	.container {
-		max-width: 95%;
-		margin: 70px auto 15px;
-	}
-
-	.update-form {
-		grid-template-columns: repeat(2, 1fr);
-	}
-
-	.result-list {
-		grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-	}
+.container h1 {
+	margin: 0;
+	font-size: clamp(2rem, 4vw, 3.2rem);
+	line-height: 1.05;
+	color: var(--color-primary);
 }
 
-@media (max-width: 767px) {
-	.container {
-		max-width: 100%;
-		margin: 20px auto 10px;
-		padding: 10px;
-		box-shadow: none;
-		border: none;
-		border-radius: 0;
-	}
-
-	.stats-box,
-	.add-customer,
-	.result-box,
-	.update-form,
-	.admin-panel {
-		position: static;
-		margin: 10px 0;
-		width: 100%;
-		box-sizing: border-box;
-	}
-
-	.result-list {
-		grid-template-columns: 1fr;
-	}
-
-	button,
-	.copy-button,
-	.toggle-results-button,
-	.mark-button,
-	.update-button,
-	.cancel-button,
-	.back-button {
-		width: calc(100% - 20px);
-		margin: 10px auto;
-		padding: 12px 15px;
-		font-size: 1em;
-		box-sizing: border-box;
-	}
-
-	.search-group {
-		width: 100%;
-		margin: 10px 0;
-		box-sizing: border-box;
-	}
-
-	.search-group input {
-		width: calc(100% - 20px);
-		margin: 0 auto;
-		padding: 12px;
-		font-size: 1em;
-		box-sizing: border-box;
-	}
-
-	.last-name-result-item {
-		flex-direction: column;
-		align-items: stretch;
-	}
-
-	.last-name-result-item .customer-info,
-	.last-name-result-item .action-buttons {
-		width: 100%;
-		text-align: center;
-		margin-right: 0;
-	}
-
-	.last-name-result-item .action-buttons {
-		justify-content: center;
-		margin-top: 10px;
-	}
+.container-copy {
+	margin: 0;
+	max-width: 760px;
+	font-size: 16px;
+	line-height: 1.8;
+	color: var(--color-text-muted);
 }
 
-.container.search-active {
-	max-width: 500px;
-	transition: max-width 0.3s ease;
-}
-
-.container.results-active {
-	max-width: 1500px;
-	transition: max-width 0.3s ease;
-}
-
-@media (max-width: 1200px) {
-	.container.results-active {
-		max-width: 95%;
-	}
-}
-
-@media (max-width: 767px) {
-	.container.search-active,
-	.container.results-active {
-		max-width: 100%;
-	}
-}
-
-h1 {
-	color: #333;
-	margin-bottom: 20px;
-}
-
-.search-group {
-	margin: 15px 0;
+.result-toolbar,
+.search-actions,
+.update-actions {
 	display: flex;
-	flex-direction: column;
-	align-items: flex-start;
+	justify-content: flex-start;
+	gap: 10px;
+	flex-wrap: wrap;
 }
 
-.search-group label {
-	font-weight: bold;
-	margin-bottom: 5px;
+.result-toolbar {
+	margin-top: 20px;
 }
 
-.search-group input {
-	padding: 10px;
-	border: 1px solid #ccc;
-	border-radius: 4px;
+.search-panel {
+	margin-top: 24px;
+	display: grid;
+	gap: 18px;
+}
+
+.search-fields {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 16px;
+}
+
+.search-group,
+.update-group {
+	display: grid;
+	gap: 8px;
+}
+
+.search-group label,
+.update-group label {
+	font-weight: 800;
+	color: var(--color-primary);
+}
+
+.search-group input,
+.update-group input {
+	padding: 14px 16px;
 	width: 100%;
-	box-sizing: border-box;
-	font-size: 14px;
 }
 
 button {
-	margin-top: 20px;
-	padding: 10px 20px;
-	background-color: #007bff;
-	color: white;
-	border: none;
-	border-radius: 4px;
+	padding: 14px 20px;
+	border: 1px solid rgba(255, 255, 255, 0.16);
+	border-radius: var(--radius-pill);
+	background: linear-gradient(135deg, var(--color-primary), #21493f);
+	color: #fffaf1;
 	cursor: pointer;
-	font-size: 16px;
-	transition: background-color 0.3s ease;
+	font-size: 15px;
+	font-weight: 800;
 }
 
-button:hover {
-	background-color: #0056b3;
+button:disabled {
+	opacity: 0.55;
+	cursor: not-allowed;
 }
 
-.back-button {
-	margin-bottom: 20px;
-	padding: 10px 20px;
-	background-color: #6c757d;
+.back-button,
+.toggle-results-button,
+.cancel-button {
+	background: rgba(255, 255, 255, 0.7);
+	color: var(--color-primary);
+	border: 1px solid var(--color-border-strong);
 }
 
-.back-button:hover {
-	background-color: #5a6268;
+.mark-button {
+	background: linear-gradient(135deg, var(--color-success), #47a16f);
+}
+
+.update-button {
+	background: linear-gradient(135deg, var(--color-accent), #9f4f2b);
+}
+
+.copy-button {
+	padding: 10px 14px;
+	background: rgba(24, 53, 46, 0.08);
+	color: var(--color-primary);
+	border: 1px solid rgba(24, 53, 46, 0.14);
+	font-size: 13px;
+	margin-top: 0;
 }
 
 .result-box {
-	margin-top: 20px;
-	padding: 15px;
-	border: 1px solid #007bff;
-	background: #e9f5ff;
-	border-radius: 4px;
-	text-align: right;
-	direction: rtl;
-	max-width: 1200px;
-	margin-left: auto;
-	margin-right: auto;
+	margin-top: 24px;
+	padding: 24px;
+	border: 1px solid rgba(24, 53, 46, 0.1);
+	background: rgba(255, 254, 251, 0.74);
+	border-radius: 24px;
 	box-sizing: border-box;
-}
-
-@media (max-width: 1200px) {
-	.result-box {
-		max-width: 100%;
-	}
 }
 
 .result-header {
 	display: flex;
 	justify-content: space-between;
-	align-items: center;
-	margin-bottom: 15px;
+	align-items: flex-start;
+	gap: 16px;
+	margin-bottom: 18px;
 }
 
-.mark-button {
-	padding: 10px 20px;
-	background-color: #28a745;
-	font-size: 14px;
+.result-header--stacked {
+	margin-bottom: 12px;
 }
 
-.mark-button:hover {
-	background-color: #218838;
+.result-header-copy {
+	display: grid;
+	gap: 6px;
+}
+
+.result-header-copy h2 {
+	margin: 0;
+	font-size: 28px;
+	color: var(--color-primary);
+}
+
+.result-header-copy p {
+	margin: 0;
+	color: var(--color-text-muted);
+	line-height: 1.7;
+}
+
+.result-header-actions {
+	display: flex;
+	gap: 10px;
+	flex-wrap: wrap;
 }
 
 .received-message {
 	font-size: 14px;
-	color: #dc3545;
-	font-weight: bold;
-}
-
-.update-button {
-	margin-left: 10px;
-	padding: 10px 20px;
-	background-color: #ffc107;
-	font-size: 14px;
-}
-
-.update-button:hover {
-	background-color: #e0a800;
-}
-
-.update-form {
-	margin-top: 20px;
-	padding: 15px;
-	border: 1px solid #007bff;
-	background: #f9f9f9;
-	border-radius: 4px;
-	text-align: right;
-	direction: rtl;
-	display: grid;
-	grid-template-columns: repeat(3, 1fr);
-	gap: 20px;
-	box-sizing: border-box;
-}
-
-.update-group {
-	display: flex;
-	flex-direction: column;
-	margin-bottom: 10px;
-}
-
-.update-group label {
-	display: block;
-	font-weight: bold;
-	margin-bottom: 5px;
-}
-
-.update-group input {
-	width: 100%;
-	padding: 8px;
-	border: 1px solid #ccc;
-	border-radius: 4px;
-	box-sizing: border-box;
-}
-
-.cancel-button {
-	margin-left: 10px;
-	padding: 10px 20px;
-	background-color: #dc3545;
-	font-size: 14px;
-}
-
-.cancel-button:hover {
-	background-color: #c82333;
+	color: var(--color-danger);
+	font-weight: 800;
 }
 
 .result-list {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-	gap: 20px;
-	list-style-type: none;
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	gap: 12px;
+	list-style: none;
 	padding: 0;
 	margin: 0;
 }
 
-.last-name-results .result-list {
-	display: flex;
-	flex-direction: column;
-	gap: 10px;
+.result-list li {
+	display: grid;
+	gap: 6px;
+	padding: 14px 16px;
+	border-radius: 18px;
+	background: rgba(255, 255, 255, 0.7);
+	border: 1px solid rgba(24, 53, 46, 0.08);
+	font-weight: 600;
+	color: var(--color-text);
 }
 
-.add-customer {
-	margin-top: 20px;
-	text-align: center;
-	padding: 10px;
-	box-sizing: border-box;
+.result-list li strong {
+	color: var(--color-primary);
+	font-size: 13px;
+}
+
+.update-form {
+	display: grid;
+	gap: 18px;
+}
+
+.update-form-heading h3 {
+	margin: 0 0 6px;
+	font-size: 28px;
+	color: var(--color-primary);
+}
+
+.update-form-heading p {
+	margin: 0;
+	color: var(--color-text-muted);
+	line-height: 1.7;
+}
+
+.update-grid {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 14px;
+}
+
+.last-name-results .result-list {
+	grid-template-columns: 1fr;
 }
 
 .last-name-result-item {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	padding: 10px;
-	border-bottom: 1px solid #ddd;
+	gap: 14px;
+	padding: 16px 18px;
+	border-radius: 18px;
+	background: rgba(255, 255, 255, 0.7);
+	border: 1px solid rgba(24, 53, 46, 0.08);
 	flex-wrap: wrap;
 }
 
 .last-name-result-item .customer-info {
-	flex-grow: 1;
-	margin-right: 10px;
+	flex: 1 1 260px;
 	text-align: right;
-	min-width: 200px;
 	word-break: break-word;
+	line-height: 1.7;
 }
 
 .last-name-result-item .action-buttons {
@@ -1010,103 +937,157 @@ button:hover {
 	gap: 8px;
 	flex-wrap: wrap;
 	justify-content: flex-start;
-	margin-top: 5px;
 }
 
-.last-name-result-item:last-child {
-	border-bottom: none;
-}
-
-.copy-button {
-	padding: 6px 12px;
-	background-color: #17a2b8;
-	color: white;
-	border: none;
-	border-radius: 4px;
-	cursor: pointer;
-	font-size: 13px;
-	margin-top: 0;
-	transition: background-color 0.3s ease;
-}
-
-.copy-button:hover {
-	background-color: #138496;
+.add-customer {
+	grid-column: 1 / -1;
 }
 
 .error-message {
-	color: #dc3545;
+	color: var(--color-danger);
 	margin-top: 10px;
-}
-
-.toggle-results-button {
-	margin-bottom: 10px;
-	padding: 8px 15px;
-	background-color: #6c757d;
-	color: white;
-	border: none;
-	border-radius: 4px;
-	cursor: pointer;
-	font-size: 14px;
-}
-
-.toggle-results-button:hover {
-	background-color: #5a6268;
+	font-weight: 700;
 }
 
 .popup-overlay {
 	position: fixed;
-	top: 0;
-	left: 0;
-	right: 0;
-	bottom: 0;
-	background: rgba(0, 0, 0, 0.45);
+	inset: 0;
+	background: rgba(16, 27, 23, 0.54);
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	z-index: 3000;
+	padding: 18px;
 }
 
 .popup-content {
-	background: #ffffff;
-	border-radius: 8px;
-	padding: 20px 24px;
-	width: min(90%, 420px);
-	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+	background:
+		linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 246, 235, 0.94));
+	border-radius: 26px;
+	padding: 26px 26px 22px;
+	width: min(100%, 440px);
+	box-shadow: 0 24px 70px rgba(0, 0, 0, 0.24);
 	direction: rtl;
 	text-align: right;
 	position: relative;
-	border: 1px solid #dee2e6;
+	border: 1px solid rgba(24, 53, 46, 0.12);
 }
 
 .popup-content h3 {
-	margin: 0 0 10px 0;
-	color: #343a40;
+	margin: 0 0 10px;
+	font-size: 28px;
+	color: var(--color-primary);
 }
 
 .popup-content p {
 	margin: 6px 0;
 	font-size: 16px;
-	color: #212529;
+	color: var(--color-text);
+	line-height: 1.7;
 }
 
 .popup-countdown {
-	color: #6c757d;
+	color: var(--color-text-muted);
 	font-size: 14px;
 }
 
 .popup-close {
 	position: absolute;
-	top: 8px;
-	left: 8px;
+	top: 10px;
+	left: 10px;
 	background: transparent;
 	border: none;
-	font-size: 22px;
+	font-size: 24px;
 	line-height: 1;
 	cursor: pointer;
-	color: #333;
+	color: var(--color-primary);
+	padding: 6px 8px;
+	box-shadow: none;
 }
 
 .popup-close:hover {
-	color: #000;
+	color: var(--color-accent);
+}
+
+@media (max-width: 1280px) {
+	.layout-grid {
+		grid-template-columns: minmax(0, 1fr) 280px;
+	}
+
+	.layout-sidebar--left {
+		grid-column: 2;
+		grid-row: 1;
+	}
+
+	.layout-sidebar--right {
+		grid-column: 2;
+		grid-row: 2;
+	}
+
+	.container {
+		grid-column: 1;
+		grid-row: 1 / span 2;
+	}
+}
+
+@media (max-width: 980px) {
+	.layout-grid {
+		grid-template-columns: 1fr;
+	}
+
+	.layout-sidebar--left,
+	.layout-sidebar--right,
+	.container,
+	.add-customer {
+		grid-column: auto;
+		grid-row: auto;
+	}
+
+	.container {
+		padding: 24px 20px;
+	}
+
+	.search-fields,
+	.update-grid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	.result-header {
+		flex-direction: column;
+	}
+}
+
+@media (max-width: 680px) {
+	.search-experience {
+		padding: 0 10px 10px;
+	}
+
+	.container {
+		padding: 20px 16px;
+	}
+
+	.search-fields,
+	.update-grid,
+	.result-list {
+		grid-template-columns: 1fr;
+	}
+
+	.result-header-actions,
+	.search-actions,
+	.update-actions,
+	.last-name-result-item .action-buttons {
+		flex-direction: column;
+	}
+
+	button,
+	.copy-button {
+		width: 100%;
+	}
+
+	.result-header-copy h2,
+	.update-form-heading h3,
+	.popup-content h3 {
+		font-size: 24px;
+	}
 }
 </style>
