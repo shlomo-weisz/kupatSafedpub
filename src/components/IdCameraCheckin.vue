@@ -554,6 +554,19 @@ export default {
 
 			return [error.name, error.message].filter(Boolean).join(": ") || String(error);
 		},
+		compactDebugText(value, maxLength = 220) {
+			const normalized = String(value || "")
+				.replace(/\s+/g, " ")
+				.trim();
+
+			if (!normalized) {
+				return "";
+			}
+
+			return normalized.length > maxLength
+				? `${normalized.slice(0, maxLength)}...`
+				: normalized;
+		},
 		async authenticate() {
 			try {
 				await loginWithRole("users", this.accessCode);
@@ -804,11 +817,33 @@ export default {
 				method: "POST",
 				body: formData,
 			});
-			this.addDebugLog("ocr-response", `${response.status} ${response.statusText || ""}`.trim());
+			const responseContentType = response.headers.get("content-type") || "unknown";
+			const responseContentLength = response.headers.get("content-length") || "";
+			const responseSummary = [
+				`${response.status} ${response.statusText || ""}`.trim(),
+				responseContentType,
+			];
+			if (response.redirected) {
+				responseSummary.push(`redirected -> ${response.url}`);
+			}
+			if (responseContentLength) {
+				responseSummary.push(`len:${responseContentLength}`);
+			}
+			this.addDebugLog("ocr-response", responseSummary.join(" | "));
+
+			const responseText = await response.text();
+			if (responseText) {
+				this.addDebugLog(
+					"ocr-body-snippet",
+					this.compactDebugText(responseText)
+				);
+			} else {
+				this.addDebugLog("ocr-empty-body");
+			}
 
 			let payload = null;
 			try {
-				payload = await response.json();
+				payload = responseText ? JSON.parse(responseText) : null;
 			} catch (error) {
 				payload = null;
 				this.addDebugLog("ocr-json-parse-failed", this.describeError(error));

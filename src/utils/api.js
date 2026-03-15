@@ -57,7 +57,7 @@ const OCR_API_URL = String(
 
 const SCAN_DEBUG_ENABLED = parseBooleanConfigValue(
 	getRuntimeConfigValue("VUE_APP_SCAN_DEBUG") || process.env.VUE_APP_SCAN_DEBUG,
-	true
+	false
 );
 
 function buildApiUrl(path = "") {
