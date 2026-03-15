@@ -27,6 +27,23 @@ function getRuntimeConfigValue(...keys) {
 	return "";
 }
 
+function parseBooleanConfigValue(value, defaultValue = false) {
+	const normalizedValue = String(value || "").trim().toLowerCase();
+	if (!normalizedValue) {
+		return defaultValue;
+	}
+
+	if (["1", "true", "yes", "on"].includes(normalizedValue)) {
+		return true;
+	}
+
+	if (["0", "false", "no", "off"].includes(normalizedValue)) {
+		return false;
+	}
+
+	return defaultValue;
+}
+
 const API_BASE_URL = normalizeApiBaseUrl(
 	getRuntimeConfigValue("VUE_APP_API_URL", "VUE_APP_API_BASE_URL") ||
 		process.env.VUE_APP_API_URL ||
@@ -37,6 +54,11 @@ const API_BASE_URL = normalizeApiBaseUrl(
 const OCR_API_URL = String(
 	getRuntimeConfigValue("VUE_APP_OCR_API_URL") || process.env.VUE_APP_OCR_API_URL || ""
 ).trim();
+
+const SCAN_DEBUG_ENABLED = parseBooleanConfigValue(
+	getRuntimeConfigValue("VUE_APP_SCAN_DEBUG") || process.env.VUE_APP_SCAN_DEBUG,
+	true
+);
 
 function buildApiUrl(path = "") {
 	const rawPath = String(path || "").trim();
@@ -113,6 +135,7 @@ async function loginWithRole(role, password) {
 export {
 	API_BASE_URL,
 	OCR_API_URL,
+	SCAN_DEBUG_ENABLED,
 	authHeaders,
 	buildApiUrl,
 	clearStoredToken,

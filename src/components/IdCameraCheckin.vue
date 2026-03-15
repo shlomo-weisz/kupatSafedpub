@@ -92,6 +92,36 @@
 					<p class="scanner-hint">
 						כדי לשפר את הדיוק, צלמו רק את אזור מספר הזהות ולא את כל התעודה.
 					</p>
+					<div v-if="scanDebugEnabled" class="scanner-debug">
+						<div class="scanner-debug-header">
+							<p class="eyebrow">אבחון</p>
+							<button
+								type="button"
+								class="secondary-button scanner-debug-clear"
+								@click="clearDebugEvents"
+							>
+								נקה לוגים
+							</button>
+						</div>
+						<div class="scanner-debug-summary">
+							<p><strong>OCR:</strong> {{ ocrApiUrl || "לא הוגדר" }}</p>
+							<p><strong>Still mode:</strong> {{ stillCaptureMode }}</p>
+						</div>
+						<div class="scanner-debug-log">
+							<p v-if="debugEvents.length === 0" class="scanner-debug-empty">
+								עדיין אין לוגים.
+							</p>
+							<div
+								v-for="entry in debugEvents"
+								:key="entry.id"
+								class="scanner-debug-entry"
+							>
+								<span class="scanner-debug-time">{{ entry.time }}</span>
+								<strong>{{ entry.label }}</strong>
+								<code v-if="entry.details">{{ entry.details }}</code>
+							</div>
+						</div>
+					</div>
 				</section>
 
 				<section
@@ -173,6 +203,7 @@
 <script>
 import {
 	OCR_API_URL,
+	SCAN_DEBUG_ENABLED,
 	authHeaders,
 	buildApiUrl,
 	clearStoredToken,
@@ -464,6 +495,10 @@ export default {
 			videoStream: null,
 			isCameraReady: false,
 			stillCaptureMode: "unknown",
+			scanDebugEnabled: SCAN_DEBUG_ENABLED,
+			ocrApiUrl: OCR_API_URL,
+			debugEvents: [],
+			nextDebugEventId: 1,
 			cameraError: "",
 			processing: false,
 			scanState: buildInitialScanState(),
@@ -476,6 +511,11 @@ export default {
 	},
 	mounted() {
 		this.volunteerName = getStoredVolunteerName();
+		this.addDebugLog("screen-mounted", window.location.href);
+		this.addDebugLog("ocr-url", this.ocrApiUrl || "missing");
+		if (typeof navigator !== "undefined" && navigator.userAgent) {
+			this.addDebugLog("user-agent", navigator.userAgent);
+		}
 		this.isAuthorized = Boolean(getStoredToken("users"));
 		if (this.isAuthorized) {
 			this.startCamera();
@@ -485,16 +525,47 @@ export default {
 		this.stopCamera();
 	},
 	methods: {
+		addDebugLog(label, details = "") {
+			if (!this.scanDebugEnabled) {
+				return;
+			}
+
+			const entry = {
+				id: this.nextDebugEventId++,
+				time: new Date().toLocaleTimeString("he-IL", {
+					hour: "2-digit",
+					minute: "2-digit",
+					second: "2-digit",
+				}),
+				label,
+				details: String(details || ""),
+			};
+
+			this.debugEvents = [entry, ...this.debugEvents].slice(0, 40);
+		},
+		clearDebugEvents() {
+			this.debugEvents = [];
+			this.addDebugLog("debug-cleared");
+		},
+		describeError(error) {
+			if (!error) {
+				return "unknown-error";
+			}
+
+			return [error.name, error.message].filter(Boolean).join(": ") || String(error);
+		},
 		async authenticate() {
 			try {
 				await loginWithRole("users", this.accessCode);
 				this.isAuthorized = true;
 				this.accessCode = "";
 				this.codeError = "";
+				this.addDebugLog("auth-success");
 				await this.$nextTick();
 				await this.startCamera();
 			} catch (error) {
 				this.codeError = "קוד המשתמש שגוי או שהשרת לא זמין.";
+				this.addDebugLog("auth-failed", this.describeError(error));
 			}
 		},
 		goHome() {
@@ -519,6 +590,7 @@ export default {
 			this.stopCamera();
 			this.cameraError = "";
 			this.isCameraReady = false;
+			this.addDebugLog("camera-start");
 
 			if (
 				typeof navigator === "undefined" ||
@@ -526,6 +598,7 @@ export default {
 				typeof navigator.mediaDevices.getUserMedia !== "function"
 			) {
 				this.cameraError = "הדפדפן הזה לא תומך בגישה למצלמה.";
+				this.addDebugLog("camera-unsupported");
 				return;
 			}
 
@@ -545,14 +618,20 @@ export default {
 				});
 				await videoElement.play().catch(() => {});
 				this.isCameraReady = true;
+				this.addDebugLog(
+					"camera-ready",
+					`${videoElement.videoWidth}x${videoElement.videoHeight}`
+				);
 			} catch (error) {
 				console.error("Camera start error:", error);
 				this.cameraError =
 					"לא ניתן היה לפתוח את המצלמה. בדקו הרשאות דפדפן ונסו שוב.";
+				this.addDebugLog("camera-error", this.describeError(error));
 			}
 		},
 		async restartCamera() {
 			this.clearStatus();
+			this.addDebugLog("camera-restart");
 			await this.startCamera();
 		},
 		async ensureUsersToken() {
@@ -576,6 +655,12 @@ export default {
 				throw new Error("לא ניתן היה להכין את אזור הצילום.");
 			}
 			const exportOptions = getCaptureExportOptions(cropRect);
+			this.addDebugLog(
+				"capture-export",
+				`${exportOptions.mimeType} ${Math.round(cropRect.sourceWidth)}x${Math.round(
+					cropRect.sourceHeight
+				)}`
+			);
 
 			canvas.width = Math.max(1, Math.round(cropRect.sourceWidth));
 			canvas.height = Math.max(1, Math.round(cropRect.sourceHeight));
@@ -625,6 +710,7 @@ export default {
 		},
 		async captureStillPhotoFile(videoElement, scanFrame) {
 			if (this.stillCaptureMode === "unsupported") {
+				this.addDebugLog("still-skip", "unsupported");
 				return null;
 			}
 
@@ -632,14 +718,17 @@ export default {
 			const videoTrack = this.getActiveVideoTrack();
 			if (!ImageCaptureCtor || !videoTrack || videoTrack.readyState !== "live") {
 				this.stillCaptureMode = "unsupported";
+				this.addDebugLog("still-unavailable");
 				return null;
 			}
 
 			let imageCapture = null;
 			try {
 				imageCapture = new ImageCaptureCtor(videoTrack);
+				this.addDebugLog("still-attempt");
 			} catch (error) {
 				this.stillCaptureMode = "unsupported";
+				this.addDebugLog("still-init-failed", this.describeError(error));
 				return null;
 			}
 
@@ -647,6 +736,10 @@ export default {
 				const photoBlob = await imageCapture.takePhoto();
 				const decodedPhoto = await loadCaptureSourceFromBlob(photoBlob);
 				this.stillCaptureMode = "supported";
+				this.addDebugLog(
+					"still-success",
+					`${decodedPhoto.width}x${decodedPhoto.height}`
+				);
 
 				try {
 					const cropRect = buildSourceCropRect(
@@ -665,6 +758,7 @@ export default {
 					error
 				);
 				this.stillCaptureMode = "unsupported";
+				this.addDebugLog("still-failed", this.describeError(error));
 				return null;
 			}
 		},
@@ -677,6 +771,7 @@ export default {
 
 			const stillPhotoFile = await this.captureStillPhotoFile(videoElement, scanFrame);
 			if (stillPhotoFile) {
+				this.addDebugLog("capture-source", "still-photo");
 				return stillPhotoFile;
 			}
 
@@ -686,34 +781,49 @@ export default {
 				videoElement.videoWidth,
 				videoElement.videoHeight
 			);
+			this.addDebugLog(
+				"capture-source",
+				`video-frame ${videoElement.videoWidth}x${videoElement.videoHeight}`
+			);
 			return this.exportCaptureFile(videoElement, cropRect);
 		},
 		async extractIdFromImage(file) {
 			if (!OCR_API_URL) {
+				this.addDebugLog("ocr-config-missing");
 				throw new Error("כתובת שירות זיהוי הצילום לא הוגדרה במשתני הסביבה.");
 			}
 
 			const formData = new FormData();
 			formData.append("file", file);
+			this.addDebugLog(
+				"ocr-request",
+				`${OCR_API_URL} | ${file.type || "unknown"} | ${file.size || 0} bytes`
+			);
 
 			const response = await fetch(OCR_API_URL, {
 				method: "POST",
 				body: formData,
 			});
+			this.addDebugLog("ocr-response", `${response.status} ${response.statusText || ""}`.trim());
 
 			let payload = null;
 			try {
 				payload = await response.json();
 			} catch (error) {
 				payload = null;
+				this.addDebugLog("ocr-json-parse-failed", this.describeError(error));
 			}
 
 			const extractedId = extractIdNumberFromPayload(payload);
 			if (extractedId) {
+				this.addDebugLog("ocr-id-detected", extractedId);
 				return extractedId;
 			}
 
 			const serviceMessage = getServiceMessage(payload);
+			if (serviceMessage) {
+				this.addDebugLog("ocr-message", serviceMessage);
+			}
 			if (!response.ok && !isNoIdDetectedMessage(serviceMessage)) {
 				throw new Error(serviceMessage || "לא ניתן היה לפענח את התמונה.");
 			}
@@ -837,6 +947,7 @@ export default {
 			}
 
 			this.processing = true;
+			this.addDebugLog("capture-click");
 			this.scanState = buildScanState(
 				"processing",
 				"מעבד את הצילום",
@@ -848,6 +959,7 @@ export default {
 				const extractedId = await this.extractIdFromImage(imageFile);
 
 				if (!extractedId) {
+					this.addDebugLog("capture-no-id");
 					this.scanState = buildScanState(
 						"warning",
 						"לא זוהתה תעודת זהות",
@@ -857,8 +969,10 @@ export default {
 				}
 
 				this.scanState = await this.processExtractedId(extractedId);
+				this.addDebugLog("capture-success", extractedId);
 			} catch (error) {
 				console.error("Scanner flow error:", error);
+				this.addDebugLog("capture-error", this.describeError(error));
 				this.scanState = buildScanState(
 					"error",
 					"שגיאה בתהליך הצילום",
@@ -1068,6 +1182,76 @@ export default {
 	margin: 0;
 	color: var(--color-text-muted);
 	line-height: 1.7;
+}
+
+.scanner-debug {
+	display: grid;
+	gap: 12px;
+	padding: 16px;
+	border-radius: 20px;
+	background: rgba(16, 27, 23, 0.92);
+	color: #f7f3eb;
+	border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.scanner-debug-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+}
+
+.scanner-debug-header .eyebrow {
+	color: #f2c8a8;
+}
+
+.scanner-debug-clear {
+	padding: 10px 14px;
+}
+
+.scanner-debug-summary {
+	display: grid;
+	gap: 8px;
+	font-size: 13px;
+	line-height: 1.6;
+	word-break: break-word;
+}
+
+.scanner-debug-summary p {
+	margin: 0;
+}
+
+.scanner-debug-log {
+	display: grid;
+	gap: 8px;
+	max-height: 240px;
+	overflow: auto;
+	padding-right: 2px;
+}
+
+.scanner-debug-empty {
+	margin: 0;
+	color: rgba(255, 243, 231, 0.78);
+}
+
+.scanner-debug-entry {
+	display: grid;
+	gap: 4px;
+	padding: 10px 12px;
+	border-radius: 14px;
+	background: rgba(255, 255, 255, 0.05);
+	font-size: 12px;
+}
+
+.scanner-debug-time {
+	color: rgba(255, 243, 231, 0.72);
+	font-size: 11px;
+}
+
+.scanner-debug-entry code {
+	white-space: pre-wrap;
+	word-break: break-word;
+	color: #cfe7ff;
 }
 
 .scanner-card--result h2 {
