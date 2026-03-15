@@ -537,6 +537,41 @@
 				</div>
 			</section>
 
+			<section class="card">
+				<h2>OCR לזיהוי תמונה</h2>
+				<div class="ocr-settings">
+					<p class="hint">
+						כאן אפשר לבחור אם מסך הצילום ישתמש בכתובת ה-OCR כמו שהיא, או
+						שייכפה שליחה דרך Google Vision.
+					</p>
+					<div class="form-grid">
+						<div>
+							<label for="ocrProvider">ספק OCR למסך הצילום</label>
+							<select id="ocrProvider" v-model="ocrProvider">
+								<option value="default">ברירת מחדל מה-URL</option>
+								<option value="google_vision">Google Vision</option>
+							</select>
+						</div>
+					</div>
+					<p class="hint">
+						בבחירה של Google Vision המערכת תוסיף לכתובת הזיהוי את
+						<code>ocr_provider=google_vision</code>.
+					</p>
+					<p v-if="effectiveOcrApiUrlPreview" class="hint ocr-url-preview">
+						כתובת הזיהוי בפועל:
+						<strong>{{ effectiveOcrApiUrlPreview }}</strong>
+					</p>
+					<p v-else class="hint">
+						עדיין לא הוגדרה כתובת OCR ב־<code>VUE_APP_OCR_API_URL</code>.
+					</p>
+					<div class="preset-actions">
+						<button class="secondary" @click="saveOcrProviderPreference">
+							שמור הגדרת OCR
+						</button>
+					</div>
+				</div>
+			</section>
+
 			<p v-if="statusMessage" :class="['status', statusType]">
 				{{ statusMessage }}
 			</p>
@@ -546,11 +581,16 @@
 
 <script>
 import {
+	OCR_API_URL,
+	OCR_PROVIDER_GOOGLE_VISION,
 	authHeaders,
 	buildApiUrl,
+	buildConfiguredOcrApiUrl,
 	clearStoredToken,
+	getStoredOcrProvider,
 	getStoredToken,
 	loginWithRole,
+	setStoredOcrProvider,
 } from "../utils/api";
 
 function cleanText(value) {
@@ -691,6 +731,7 @@ export default {
 			reportRecipientsSource: "none",
 			reportRecipientHistory: [],
 			saveReportRecipientsLoading: false,
+			ocrProvider: getStoredOcrProvider(),
 			usersPasswordForm: {
 				password: "",
 				confirmPassword: "",
@@ -767,6 +808,9 @@ export default {
 		},
 		currentReportRecipients() {
 			return parseRecipientsText(this.reportRecipientsText);
+		},
+		effectiveOcrApiUrlPreview() {
+			return buildConfiguredOcrApiUrl(OCR_API_URL, this.ocrProvider);
 		},
 		previewRows() {
 			return this.csvRows
@@ -1370,6 +1414,14 @@ export default {
 				this.saveUsersPasswordLoading = false;
 			}
 		},
+		saveOcrProviderPreference() {
+			setStoredOcrProvider(this.ocrProvider);
+			this.setStatus(
+				this.ocrProvider === OCR_PROVIDER_GOOGLE_VISION
+					? "הגדרת ה-OCR נשמרה. מסך הצילום יוסיף לכתובת הזיהוי את ocr_provider=google_vision."
+					: "הגדרת ה-OCR נשמרה. מסך הצילום יחזור להשתמש בכתובת הזיהוי כפי שהוגדרה."
+			);
+		},
 		async mergeWaitIntoMain() {
 			if (!this.activeTableSet?.baseName) {
 				this.setStatus("לא נמצא סט פעיל להעברה.", "error");
@@ -1827,6 +1879,10 @@ button:disabled {
 
 .preset-summary {
 	margin-bottom: 0;
+}
+
+.ocr-url-preview {
+	word-break: break-word;
 }
 
 .recipient-history {

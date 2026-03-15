@@ -60,6 +60,10 @@ const SCAN_DEBUG_ENABLED = parseBooleanConfigValue(
 	false
 );
 
+const OCR_PROVIDER_STORAGE_KEY = "kupa.ocrProvider";
+const OCR_PROVIDER_DEFAULT = "default";
+const OCR_PROVIDER_GOOGLE_VISION = "google_vision";
+
 function buildApiUrl(path = "") {
 	const rawPath = String(path || "").trim();
 	if (!rawPath || rawPath === "/") {
@@ -75,6 +79,12 @@ function getStorageKey(role) {
 }
 
 const VOLUNTEER_NAME_STORAGE_KEY = "kupa.volunteerName";
+
+function normalizeStoredOcrProvider(value) {
+	return String(value || "").trim().toLowerCase() === OCR_PROVIDER_GOOGLE_VISION
+		? OCR_PROVIDER_GOOGLE_VISION
+		: OCR_PROVIDER_DEFAULT;
+}
 
 function getStoredToken(role) {
 	return window.localStorage.getItem(getStorageKey(role)) || "";
@@ -110,6 +120,69 @@ function setStoredVolunteerName(name) {
 	window.localStorage.setItem(VOLUNTEER_NAME_STORAGE_KEY, normalizedName);
 }
 
+function getStoredOcrProvider() {
+	if (typeof window === "undefined" || !window.localStorage) {
+		return OCR_PROVIDER_DEFAULT;
+	}
+
+	return normalizeStoredOcrProvider(
+		window.localStorage.getItem(OCR_PROVIDER_STORAGE_KEY)
+	);
+}
+
+function setStoredOcrProvider(provider) {
+	if (typeof window === "undefined" || !window.localStorage) {
+		return;
+	}
+
+	const normalizedProvider = normalizeStoredOcrProvider(provider);
+	if (normalizedProvider === OCR_PROVIDER_DEFAULT) {
+		window.localStorage.removeItem(OCR_PROVIDER_STORAGE_KEY);
+		return;
+	}
+
+	window.localStorage.setItem(OCR_PROVIDER_STORAGE_KEY, normalizedProvider);
+}
+
+function buildConfiguredOcrApiUrl(
+	baseUrl = OCR_API_URL,
+	provider = getStoredOcrProvider()
+) {
+	const normalizedBaseUrl = String(baseUrl || "").trim();
+	if (!normalizedBaseUrl) {
+		return "";
+	}
+
+	if (normalizeStoredOcrProvider(provider) !== OCR_PROVIDER_GOOGLE_VISION) {
+		return normalizedBaseUrl;
+	}
+
+	try {
+		const isAbsoluteUrl = /^https?:\/\//i.test(normalizedBaseUrl);
+		const fallbackBase =
+			typeof window !== "undefined" && window.location?.origin
+				? window.location.origin
+				: "http://localhost";
+		const parsedUrl = new URL(normalizedBaseUrl, fallbackBase);
+		parsedUrl.searchParams.set("ocr_provider", OCR_PROVIDER_GOOGLE_VISION);
+
+		if (isAbsoluteUrl) {
+			return parsedUrl.toString();
+		}
+
+		return `${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`;
+	} catch {
+		const withoutExistingProvider = normalizedBaseUrl
+			.replace(/([?&])ocr_provider=[^&#]*/i, "$1")
+			.replace(/\?&/, "?")
+			.replace(/&&+/g, "&")
+			.replace(/[?&]$/, "");
+		const separator = withoutExistingProvider.includes("?") ? "&" : "?";
+
+		return `${withoutExistingProvider}${separator}ocr_provider=${OCR_PROVIDER_GOOGLE_VISION}`;
+	}
+}
+
 function authHeaders(token) {
 	return token ? { Authorization: `Bearer ${token}` } : {};
 }
@@ -135,13 +208,18 @@ async function loginWithRole(role, password) {
 export {
 	API_BASE_URL,
 	OCR_API_URL,
+	OCR_PROVIDER_DEFAULT,
+	OCR_PROVIDER_GOOGLE_VISION,
 	SCAN_DEBUG_ENABLED,
 	authHeaders,
 	buildApiUrl,
+	buildConfiguredOcrApiUrl,
 	clearStoredToken,
+	getStoredOcrProvider,
 	getStoredToken,
 	getStoredVolunteerName,
 	loginWithRole,
+	setStoredOcrProvider,
 	setStoredVolunteerName,
 	setStoredToken,
 };

@@ -206,6 +206,7 @@ import {
 	SCAN_DEBUG_ENABLED,
 	authHeaders,
 	buildApiUrl,
+	buildConfiguredOcrApiUrl,
 	clearStoredToken,
 	getStoredToken,
 	getStoredVolunteerName,
@@ -496,7 +497,7 @@ export default {
 			isCameraReady: false,
 			stillCaptureMode: "unknown",
 			scanDebugEnabled: SCAN_DEBUG_ENABLED,
-			ocrApiUrl: OCR_API_URL,
+			ocrApiUrl: buildConfiguredOcrApiUrl(OCR_API_URL),
 			debugEvents: [],
 			nextDebugEventId: 1,
 			cameraError: "",
@@ -511,6 +512,7 @@ export default {
 	},
 	mounted() {
 		this.volunteerName = getStoredVolunteerName();
+		this.ocrApiUrl = buildConfiguredOcrApiUrl(OCR_API_URL);
 		this.addDebugLog("screen-mounted", window.location.href);
 		this.addDebugLog("ocr-url", this.ocrApiUrl || "missing");
 		if (typeof navigator !== "undefined" && navigator.userAgent) {
@@ -801,7 +803,9 @@ export default {
 			return this.exportCaptureFile(videoElement, cropRect);
 		},
 		async extractIdFromImage(file) {
-			if (!OCR_API_URL) {
+			const ocrRequestUrl = buildConfiguredOcrApiUrl(OCR_API_URL);
+			this.ocrApiUrl = ocrRequestUrl;
+			if (!ocrRequestUrl) {
 				this.addDebugLog("ocr-config-missing");
 				throw new Error("כתובת שירות זיהוי הצילום לא הוגדרה במשתני הסביבה.");
 			}
@@ -810,10 +814,10 @@ export default {
 			formData.append("file", file);
 			this.addDebugLog(
 				"ocr-request",
-				`${OCR_API_URL} | ${file.type || "unknown"} | ${file.size || 0} bytes`
+				`${ocrRequestUrl} | ${file.type || "unknown"} | ${file.size || 0} bytes`
 			);
 
-			const response = await fetch(OCR_API_URL, {
+			const response = await fetch(ocrRequestUrl, {
 				method: "POST",
 				body: formData,
 			});
