@@ -243,6 +243,14 @@
 
 			<div class="layout-sidebar layout-sidebar--right">
 				<AdminPanel />
+				<button
+					type="button"
+					class="scan-shortcut scan-shortcut--desktop"
+					@click="$router.push('/scan-id')"
+				>
+					<span>מסך צילום תעודה</span>
+					<small>צילום, פענוח וסימון קבלה</small>
+				</button>
 			</div>
 
 			<div class="add-customer">
@@ -272,7 +280,9 @@ import {
 	buildApiUrl,
 	clearStoredToken,
 	getStoredToken,
+	getStoredVolunteerName,
 	loginWithRole,
+	setStoredVolunteerName,
 } from "../utils/api";
 
 async function readJsonResponse(response) {
@@ -320,7 +330,13 @@ export default {
 			statsIntervalId: null,
 		};
 	},
+	watch: {
+		volunteerName(newValue) {
+			setStoredVolunteerName(newValue);
+		},
+	},
 	mounted() {
+		this.volunteerName = getStoredVolunteerName();
 		this.updateTaken();
 		this.statsIntervalId = window.setInterval(this.updateTaken, 60000);
 	},
@@ -685,6 +701,39 @@ export default {
 .layout-sidebar {
 	display: grid;
 	gap: 18px;
+}
+
+.scan-shortcut {
+	display: none;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 2px;
+	width: 100%;
+	padding: 16px 18px;
+	border: 1px solid var(--color-border-strong);
+	border-radius: var(--radius-lg);
+	background: var(--color-surface);
+	color: var(--color-primary);
+	box-shadow: var(--shadow-soft);
+	backdrop-filter: blur(16px);
+	text-align: right;
+}
+
+.scan-shortcut:hover {
+	background: var(--color-primary);
+	color: #fffaf1;
+}
+
+.scan-shortcut small {
+	font-size: 12px;
+	font-weight: 600;
+	opacity: 0.72;
+}
+
+@media (min-width: 1281px) {
+	.scan-shortcut--desktop {
+		display: inline-flex;
+	}
 }
 
 .container {

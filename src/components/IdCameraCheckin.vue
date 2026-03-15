@@ -176,13 +176,63 @@ import {
 	buildApiUrl,
 	clearStoredToken,
 	getStoredToken,
+	getStoredVolunteerName,
 	loginWithRole,
+	setStoredVolunteerName,
 } from "../utils/api";
 import VolunteerNameInput from "./VolunteerNameInput.vue";
 import myLogo from "./myLogo.vue";
 
 const OCR_API_URL =
 	"https://orlando-classes-adjustable-meat.trycloudflare.com/extract-id?ocr_provider=auto";
+const CAMERA_CAPTURE_QUALITY = 0.97;
+const CAMERA_VIDEO_CONSTRAINTS = [
+	{
+		facingMode: { ideal: "environment" },
+		width: { min: 1920, ideal: 3840 },
+		height: { min: 1080, ideal: 2160 },
+		aspectRatio: { ideal: 16 / 9 },
+	},
+	{
+		facingMode: { ideal: "environment" },
+		width: { ideal: 2560 },
+		height: { ideal: 1440 },
+		aspectRatio: { ideal: 16 / 9 },
+	},
+	{
+		facingMode: { ideal: "environment" },
+		width: { ideal: 1920 },
+		height: { ideal: 1080 },
+		aspectRatio: { ideal: 16 / 9 },
+	},
+	{
+		facingMode: { ideal: "environment" },
+	},
+];
+
+async function openBestAvailableCameraStream() {
+	let lastError = null;
+
+	for (const videoConstraints of CAMERA_VIDEO_CONSTRAINTS) {
+		try {
+			return await navigator.mediaDevices.getUserMedia({
+				video: videoConstraints,
+				audio: false,
+			});
+		} catch (error) {
+			lastError = error;
+			if (
+				error?.name === "NotAllowedError" ||
+				error?.name === "SecurityError" ||
+				error?.name === "NotReadableError"
+			) {
+				break;
+			}
+		}
+	}
+
+	throw lastError || new Error("לא ניתן היה לפתוח את המצלמה.");
+}
 
 function buildInitialScanState() {
 	return {
@@ -320,7 +370,13 @@ export default {
 			scanState: buildInitialScanState(),
 		};
 	},
+	watch: {
+		volunteerName(newValue) {
+			setStoredVolunteerName(newValue);
+		},
+	},
 	mounted() {
+		this.volunteerName = getStoredVolunteerName();
 		this.isAuthorized = Boolean(getStoredToken("users"));
 		if (this.isAuthorized) {
 			this.startCamera();
@@ -374,14 +430,7 @@ export default {
 			}
 
 			try {
-				const stream = await navigator.mediaDevices.getUserMedia({
-					video: {
-						facingMode: { ideal: "environment" },
-						width: { ideal: 1920 },
-						height: { ideal: 1080 },
-					},
-					audio: false,
-				});
+				const stream = await openBestAvailableCameraStream();
 
 				this.videoStream = stream;
 				const videoElement = this.$refs.videoElement;
@@ -463,6 +512,14 @@ export default {
 			canvas.width = Math.max(1, Math.round(sourceWidth));
 			canvas.height = Math.max(1, Math.round(sourceHeight));
 			const context = canvas.getContext("2d");
+			if (!context) {
+				throw new Error("לא ניתן היה להכין את משטח הצילום.");
+			}
+
+			context.imageSmoothingEnabled = true;
+			if ("imageSmoothingQuality" in context) {
+				context.imageSmoothingQuality = "high";
+			}
 			context.drawImage(
 				videoElement,
 				sourceX,
@@ -490,7 +547,7 @@ export default {
 						);
 					},
 					"image/jpeg",
-					0.92
+					CAMERA_CAPTURE_QUALITY
 				);
 			});
 		},

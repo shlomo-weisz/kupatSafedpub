@@ -45,6 +45,8 @@ function getStorageKey(role) {
 	return `kupa.auth.${role}`;
 }
 
+const VOLUNTEER_NAME_STORAGE_KEY = "kupa.volunteerName";
+
 function getStoredToken(role) {
 	return window.localStorage.getItem(getStorageKey(role)) || "";
 }
@@ -55,6 +57,28 @@ function setStoredToken(role, token) {
 
 function clearStoredToken(role) {
 	window.localStorage.removeItem(getStorageKey(role));
+}
+
+function getStoredVolunteerName() {
+	if (typeof window === "undefined" || !window.localStorage) {
+		return "";
+	}
+
+	return window.localStorage.getItem(VOLUNTEER_NAME_STORAGE_KEY) || "";
+}
+
+function setStoredVolunteerName(name) {
+	if (typeof window === "undefined" || !window.localStorage) {
+		return;
+	}
+
+	const normalizedName = String(name || "");
+	if (!normalizedName.trim()) {
+		window.localStorage.removeItem(VOLUNTEER_NAME_STORAGE_KEY);
+		return;
+	}
+
+	window.localStorage.setItem(VOLUNTEER_NAME_STORAGE_KEY, normalizedName);
 }
 
 function authHeaders(token) {
@@ -85,6 +109,8 @@ export {
 	buildApiUrl,
 	clearStoredToken,
 	getStoredToken,
+	getStoredVolunteerName,
 	loginWithRole,
+	setStoredVolunteerName,
 	setStoredToken,
 };

@@ -1,7 +1,7 @@
 <template>
 	<CodeProtectedComponent>
 		<div class="home-shell">
-			<div class="page-actions">
+			<div class="page-actions page-actions--mobile-tablet">
 				<button class="scan-link" @click="$router.push('/scan-id')">
 					<span>מסך צילום תעודה</span>
 					<small>צילום, פענוח וסימון קבלה</small>
@@ -66,6 +66,12 @@ export default {
 	font-size: 12px;
 	font-weight: 600;
 	opacity: 0.72;
+}
+
+@media (min-width: 1281px) {
+	.page-actions--mobile-tablet {
+		display: none;
+	}
 }
 
 @media (max-width: 768px) {
