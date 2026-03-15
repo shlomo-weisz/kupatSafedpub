@@ -25,11 +25,12 @@ See [Configuration Reference](https://cli.vuejs.org/config/).
 
 ## API configuration
 
-The client reads the server address from `VUE_APP_API_URL`.
+The client reads the main server address from `VUE_APP_API_URL` and the OCR scanning endpoint from `VUE_APP_OCR_API_URL`.
 
 - Local Docker / same-origin proxy: leave it unset and the app will use `/api`
 - Remote server example: `VUE_APP_API_URL=https://api.example.com`
 - Remote server with path prefix: `VUE_APP_API_URL=https://api.example.com/api`
+- OCR service example: `VUE_APP_OCR_API_URL=https://ocr.example.com/extract-id?ocr_provider=auto`
 
 You can copy `.env.example` to `.env.local` for local development.
 

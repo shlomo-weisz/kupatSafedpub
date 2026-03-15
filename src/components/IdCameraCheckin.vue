@@ -172,6 +172,7 @@
 
 <script>
 import {
+	OCR_API_URL,
 	authHeaders,
 	buildApiUrl,
 	clearStoredToken,
@@ -182,10 +183,8 @@ import {
 } from "../utils/api";
 import VolunteerNameInput from "./VolunteerNameInput.vue";
 import myLogo from "./myLogo.vue";
-
-const OCR_API_URL =
-	"https://orlando-classes-adjustable-meat.trycloudflare.com/extract-id?ocr_provider=auto";
 const CAMERA_CAPTURE_QUALITY = 0.97;
+const LOSSLESS_CAPTURE_MAX_PIXELS = 2500000;
 const CAMERA_VIDEO_CONSTRAINTS = [
 	{
 		facingMode: { ideal: "environment" },
@@ -244,6 +243,25 @@ async function openBestAvailableCameraStream() {
 	}
 
 	throw lastError || new Error("לא ניתן היה לפתוח את המצלמה.");
+}
+
+function getCaptureExportOptions(cropRect) {
+	const pixelCount =
+		Math.max(1, Math.round(cropRect.sourceWidth)) *
+		Math.max(1, Math.round(cropRect.sourceHeight));
+
+	if (pixelCount <= LOSSLESS_CAPTURE_MAX_PIXELS) {
+		return {
+			mimeType: "image/png",
+			fileExtension: "png",
+		};
+	}
+
+	return {
+		mimeType: "image/jpeg",
+		fileExtension: "jpg",
+		quality: CAMERA_CAPTURE_QUALITY,
+	};
 }
 
 function buildSourceCropRect(videoElement, scanFrame, sourceWidth, sourceHeight) {
@@ -557,6 +575,7 @@ export default {
 			if (!canvas) {
 				throw new Error("לא ניתן היה להכין את אזור הצילום.");
 			}
+			const exportOptions = getCaptureExportOptions(cropRect);
 
 			canvas.width = Math.max(1, Math.round(cropRect.sourceWidth));
 			canvas.height = Math.max(1, Math.round(cropRect.sourceHeight));
@@ -590,13 +609,13 @@ export default {
 						}
 
 						resolve(
-							new File([blob], `id-capture-${Date.now()}.jpg`, {
-								type: "image/jpeg",
+							new File([blob], `id-capture-${Date.now()}.${exportOptions.fileExtension}`, {
+								type: exportOptions.mimeType,
 							})
 						);
 					},
-					"image/jpeg",
-					CAMERA_CAPTURE_QUALITY
+					exportOptions.mimeType,
+					exportOptions.quality
 				);
 			});
 		},
@@ -670,6 +689,10 @@ export default {
 			return this.exportCaptureFile(videoElement, cropRect);
 		},
 		async extractIdFromImage(file) {
+			if (!OCR_API_URL) {
+				throw new Error("כתובת שירות זיהוי הצילום לא הוגדרה במשתני הסביבה.");
+			}
+
 			const formData = new FormData();
 			formData.append("file", file);
 

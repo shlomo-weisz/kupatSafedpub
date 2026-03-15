@@ -12,18 +12,21 @@
 
 ```env
 VUE_APP_API_URL=https://your-server-domain
+VUE_APP_OCR_API_URL=https://your-ocr-service-domain/extract-id?ocr_provider=auto
 ```
 
 אם השרת נמצא תחת path כמו `/api`, הגדירי:
 
 ```env
 VUE_APP_API_URL=https://your-server-domain/api
+VUE_APP_OCR_API_URL=https://your-ocr-service-domain/extract-id?ocr_provider=auto
 ```
 
 ## משתנים נפוצים
 
 ```env
 VUE_APP_API_URL=https://your-server-domain
+VUE_APP_OCR_API_URL=https://your-ocr-service-domain/extract-id?ocr_provider=auto
 CLIENT_PORT=8090
 ```
 
@@ -48,4 +51,4 @@ docker compose down
 
 ## הערה
 
-אם משנים את `VUE_APP_API_URL`, מספיק להרים מחדש את הקונטיינר של הלקוח. הקונטיינר מייצר `runtime-config.js` בזמן העלייה.
+אם משנים את `VUE_APP_API_URL` או `VUE_APP_OCR_API_URL`, מספיק להרים מחדש את הקונטיינר של הלקוח. הקונטיינר מייצר `runtime-config.js` בזמן העלייה.

@@ -12,24 +12,31 @@ function normalizeApiBaseUrl(value) {
 	return normalizedPath.replace(/\/+$/, "") || "/api";
 }
 
-function getRuntimeApiBaseUrl() {
+function getRuntimeConfigValue(...keys) {
 	if (typeof window === "undefined" || !window.__APP_CONFIG__) {
 		return "";
 	}
 
-	return (
-		window.__APP_CONFIG__.VUE_APP_API_URL ||
-		window.__APP_CONFIG__.VUE_APP_API_BASE_URL ||
-		""
-	);
+	for (const key of keys) {
+		const value = window.__APP_CONFIG__[key];
+		if (String(value || "").trim()) {
+			return value;
+		}
+	}
+
+	return "";
 }
 
 const API_BASE_URL = normalizeApiBaseUrl(
-	getRuntimeApiBaseUrl() ||
+	getRuntimeConfigValue("VUE_APP_API_URL", "VUE_APP_API_BASE_URL") ||
 		process.env.VUE_APP_API_URL ||
 		process.env.VUE_APP_API_BASE_URL ||
 		"/api"
 );
+
+const OCR_API_URL = String(
+	getRuntimeConfigValue("VUE_APP_OCR_API_URL") || process.env.VUE_APP_OCR_API_URL || ""
+).trim();
 
 function buildApiUrl(path = "") {
 	const rawPath = String(path || "").trim();
@@ -105,6 +112,7 @@ async function loginWithRole(role, password) {
 
 export {
 	API_BASE_URL,
+	OCR_API_URL,
 	authHeaders,
 	buildApiUrl,
 	clearStoredToken,
