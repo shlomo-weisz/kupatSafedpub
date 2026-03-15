@@ -210,6 +210,18 @@ const CAMERA_VIDEO_CONSTRAINTS = [
 	},
 ];
 
+function getImageCaptureConstructor() {
+	if (typeof window !== "undefined" && typeof window.ImageCapture === "function") {
+		return window.ImageCapture;
+	}
+
+	if (typeof self !== "undefined" && typeof self.ImageCapture === "function") {
+		return self.ImageCapture;
+	}
+
+	return null;
+}
+
 async function openBestAvailableCameraStream() {
 	let lastError = null;
 
@@ -232,6 +244,74 @@ async function openBestAvailableCameraStream() {
 	}
 
 	throw lastError || new Error("לא ניתן היה לפתוח את המצלמה.");
+}
+
+function buildSourceCropRect(videoElement, scanFrame, sourceWidth, sourceHeight) {
+	let sourceX = 0;
+	let sourceY = 0;
+	let cropWidth = sourceWidth;
+	let cropHeight = sourceHeight;
+
+	if (scanFrame) {
+		const videoRect = videoElement.getBoundingClientRect();
+		const frameRect = scanFrame.getBoundingClientRect();
+		const displayWidth = Math.max(1, videoRect.width);
+		const displayHeight = Math.max(1, videoRect.height);
+		const scale = Math.max(displayWidth / sourceWidth, displayHeight / sourceHeight);
+		const renderedWidth = sourceWidth * scale;
+		const renderedHeight = sourceHeight * scale;
+		const offsetX = (renderedWidth - displayWidth) / 2;
+		const offsetY = (renderedHeight - displayHeight) / 2;
+
+		sourceX = Math.max(0, (frameRect.left - videoRect.left + offsetX) / scale);
+		sourceY = Math.max(0, (frameRect.top - videoRect.top + offsetY) / scale);
+		cropWidth = Math.min(sourceWidth - sourceX, frameRect.width / scale);
+		cropHeight = Math.min(sourceHeight - sourceY, frameRect.height / scale);
+	}
+
+	return {
+		sourceX,
+		sourceY,
+		sourceWidth: Math.max(1, cropWidth),
+		sourceHeight: Math.max(1, cropHeight),
+	};
+}
+
+async function loadCaptureSourceFromBlob(blob) {
+	if (typeof createImageBitmap === "function") {
+		const bitmap = await createImageBitmap(blob);
+		return {
+			source: bitmap,
+			width: bitmap.width,
+			height: bitmap.height,
+			cleanup: () => bitmap.close(),
+		};
+	}
+
+	if (typeof URL === "undefined" || typeof Image === "undefined") {
+		throw new Error("לא ניתן היה לטעון את תמונת הצילום.");
+	}
+
+	const objectUrl = URL.createObjectURL(blob);
+	try {
+		const image = await new Promise((resolve, reject) => {
+			const imageElement = new Image();
+			imageElement.onload = () => resolve(imageElement);
+			imageElement.onerror = () =>
+				reject(new Error("לא ניתן היה לטעון את תמונת הצילום."));
+			imageElement.src = objectUrl;
+		});
+
+		return {
+			source: image,
+			width: image.naturalWidth,
+			height: image.naturalHeight,
+			cleanup: () => URL.revokeObjectURL(objectUrl),
+		};
+	} catch (error) {
+		URL.revokeObjectURL(objectUrl);
+		throw error;
+	}
 }
 
 function buildInitialScanState() {
@@ -365,6 +445,7 @@ export default {
 			volunteerName: "",
 			videoStream: null,
 			isCameraReady: false,
+			stillCaptureMode: "unknown",
 			cameraError: "",
 			processing: false,
 			scanState: buildInitialScanState(),
@@ -414,6 +495,7 @@ export default {
 				videoElement.srcObject = null;
 			}
 			this.isCameraReady = false;
+			this.stillCaptureMode = "unknown";
 		},
 		async startCamera() {
 			this.stopCamera();
@@ -470,47 +552,14 @@ export default {
 			this.isAuthorized = true;
 			return token;
 		},
-		async captureFrameFile() {
-			const videoElement = this.$refs.videoElement;
-			const scanFrame = this.$refs.scanFrame;
+		async exportCaptureFile(source, cropRect) {
 			const canvas = this.$refs.captureCanvas;
-			if (!videoElement || !canvas || !videoElement.videoWidth || !videoElement.videoHeight) {
-				throw new Error("המצלמה עדיין לא מוכנה לצילום.");
+			if (!canvas) {
+				throw new Error("לא ניתן היה להכין את אזור הצילום.");
 			}
 
-			let sourceX = 0;
-			let sourceY = 0;
-			let sourceWidth = videoElement.videoWidth;
-			let sourceHeight = videoElement.videoHeight;
-
-			if (scanFrame) {
-				const videoRect = videoElement.getBoundingClientRect();
-				const frameRect = scanFrame.getBoundingClientRect();
-				const displayWidth = videoRect.width;
-				const displayHeight = videoRect.height;
-				const scale = Math.max(
-					displayWidth / videoElement.videoWidth,
-					displayHeight / videoElement.videoHeight
-				);
-				const renderedWidth = videoElement.videoWidth * scale;
-				const renderedHeight = videoElement.videoHeight * scale;
-				const offsetX = (renderedWidth - displayWidth) / 2;
-				const offsetY = (renderedHeight - displayHeight) / 2;
-
-				sourceX = Math.max(0, (frameRect.left - videoRect.left + offsetX) / scale);
-				sourceY = Math.max(0, (frameRect.top - videoRect.top + offsetY) / scale);
-				sourceWidth = Math.min(
-					videoElement.videoWidth - sourceX,
-					frameRect.width / scale
-				);
-				sourceHeight = Math.min(
-					videoElement.videoHeight - sourceY,
-					frameRect.height / scale
-				);
-			}
-
-			canvas.width = Math.max(1, Math.round(sourceWidth));
-			canvas.height = Math.max(1, Math.round(sourceHeight));
+			canvas.width = Math.max(1, Math.round(cropRect.sourceWidth));
+			canvas.height = Math.max(1, Math.round(cropRect.sourceHeight));
 			const context = canvas.getContext("2d");
 			if (!context) {
 				throw new Error("לא ניתן היה להכין את משטח הצילום.");
@@ -521,11 +570,11 @@ export default {
 				context.imageSmoothingQuality = "high";
 			}
 			context.drawImage(
-				videoElement,
-				sourceX,
-				sourceY,
-				sourceWidth,
-				sourceHeight,
+				source,
+				cropRect.sourceX,
+				cropRect.sourceY,
+				cropRect.sourceWidth,
+				cropRect.sourceHeight,
 				0,
 				0,
 				canvas.width,
@@ -550,6 +599,75 @@ export default {
 					CAMERA_CAPTURE_QUALITY
 				);
 			});
+		},
+		getActiveVideoTrack() {
+			const tracks = this.videoStream?.getVideoTracks?.() || [];
+			return tracks[0] || null;
+		},
+		async captureStillPhotoFile(videoElement, scanFrame) {
+			if (this.stillCaptureMode === "unsupported") {
+				return null;
+			}
+
+			const ImageCaptureCtor = getImageCaptureConstructor();
+			const videoTrack = this.getActiveVideoTrack();
+			if (!ImageCaptureCtor || !videoTrack || videoTrack.readyState !== "live") {
+				this.stillCaptureMode = "unsupported";
+				return null;
+			}
+
+			let imageCapture = null;
+			try {
+				imageCapture = new ImageCaptureCtor(videoTrack);
+			} catch (error) {
+				this.stillCaptureMode = "unsupported";
+				return null;
+			}
+
+			try {
+				const photoBlob = await imageCapture.takePhoto();
+				const decodedPhoto = await loadCaptureSourceFromBlob(photoBlob);
+				this.stillCaptureMode = "supported";
+
+				try {
+					const cropRect = buildSourceCropRect(
+						videoElement,
+						scanFrame,
+						decodedPhoto.width,
+						decodedPhoto.height
+					);
+					return await this.exportCaptureFile(decodedPhoto.source, cropRect);
+				} finally {
+					decodedPhoto.cleanup();
+				}
+			} catch (error) {
+				console.warn(
+					"Still photo capture failed, falling back to video frame capture.",
+					error
+				);
+				this.stillCaptureMode = "unsupported";
+				return null;
+			}
+		},
+		async captureFrameFile() {
+			const videoElement = this.$refs.videoElement;
+			const scanFrame = this.$refs.scanFrame;
+			if (!videoElement || !videoElement.videoWidth || !videoElement.videoHeight) {
+				throw new Error("המצלמה עדיין לא מוכנה לצילום.");
+			}
+
+			const stillPhotoFile = await this.captureStillPhotoFile(videoElement, scanFrame);
+			if (stillPhotoFile) {
+				return stillPhotoFile;
+			}
+
+			const cropRect = buildSourceCropRect(
+				videoElement,
+				scanFrame,
+				videoElement.videoWidth,
+				videoElement.videoHeight
+			);
+			return this.exportCaptureFile(videoElement, cropRect);
 		},
 		async extractIdFromImage(file) {
 			const formData = new FormData();
