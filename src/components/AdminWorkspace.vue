@@ -538,6 +538,176 @@
 			</section>
 
 			<section class="card">
+				<h2>חלונות זמן למסירה</h2>
+				<div class="time-window-settings">
+					<p class="hint">
+						כאן אפשר להגדיר חלונות זמן לפי מספר ילדים או לפי שם משפחה,
+						ולבחור אילו חלונות פעילים כרגע. ההגדרות נשמרות בשרת לכל
+						המשתמשים, בלי לשנות את טבלאות הלקוחות הרגילות.
+					</p>
+					<label class="checkbox-row">
+						<input v-model="timeWindowSettingsForm.enabled" type="checkbox" />
+						<span>הפעל בדיקת חלונות זמן במסכי החיפוש והצילום</span>
+					</label>
+					<div class="time-window-summary">
+						<p class="hint">
+							{{
+								timeWindowSettingsForm.enabled
+									? "האכיפה פעילה כרגע לכל המשתמשים."
+									: "האכיפה כבויה כרגע לכל המשתמשים, וכל חלונות הזמן ייחשבו כלא מגבילים."
+							}}
+						</p>
+						<p v-if="activeTimeWindowLabels.length > 0" class="hint">
+							חלונות פעילים עכשיו:
+							<strong>{{ activeTimeWindowLabels.join(" | ") }}</strong>
+						</p>
+						<p v-else class="hint">כרגע לא סומן אף חלון כפעיל.</p>
+						<p v-if="scheduledTimeWindowLabels.length > 0" class="hint">
+							חלונות בהמתנה:
+							<strong>{{ scheduledTimeWindowLabels.join(" | ") }}</strong>
+						</p>
+					</div>
+					<div class="preset-actions">
+						<button class="secondary" @click="addChildrenTimeWindow">
+							הוסף חלון לפי ילדים
+						</button>
+						<button class="secondary" @click="addLastNameTimeWindow">
+							הוסף חלון לפי שם משפחה
+						</button>
+						<button class="secondary" @click="loadTimeWindowSettings">
+							טען הגדרות שמורות
+						</button>
+						<button @click="saveTimeWindowSettings">שמור חלונות זמן</button>
+					</div>
+					<div
+						v-if="timeWindowSettingsForm.windows.length === 0"
+						class="empty-state"
+					>
+						עדיין לא הוגדרו חלונות זמן.
+					</div>
+					<div v-else class="time-window-list">
+						<section
+							v-for="(timeWindow, index) in timeWindowSettingsForm.windows"
+							:key="timeWindow.id"
+							class="time-window-item"
+						>
+							<div class="time-window-item-header">
+								<div>
+									<h3>
+										{{ timeWindow.label || `חלון זמן ${index + 1}` }}
+									</h3>
+									<p class="hint">{{ describeTimeWindowCriteria(timeWindow) }}</p>
+								</div>
+								<button
+									class="secondary small"
+									@click="removeTimeWindow(timeWindow.id)"
+								>
+									מחק
+								</button>
+							</div>
+							<div class="form-grid">
+								<div>
+									<label :for="`time-window-label-${timeWindow.id}`">
+										שם חלון
+									</label>
+									<input
+										:id="`time-window-label-${timeWindow.id}`"
+										v-model.trim="timeWindow.label"
+										type="text"
+										placeholder="לדוגמה: משפחות גדולות"
+									/>
+								</div>
+								<div>
+									<label :for="`time-window-type-${timeWindow.id}`">
+										סוג חלון
+									</label>
+									<select
+										:id="`time-window-type-${timeWindow.id}`"
+										:value="timeWindow.type"
+										@change="
+											handleTimeWindowTypeChange(
+												index,
+												$event.target.value
+											)
+										"
+									>
+										<option :value="TIME_WINDOW_TYPE_CHILDREN">
+											לפי מספר ילדים
+										</option>
+										<option :value="TIME_WINDOW_TYPE_LAST_NAME">
+											לפי שם משפחה
+										</option>
+									</select>
+								</div>
+								<div>
+									<label :for="`time-window-next-${timeWindow.id}`">
+										שעת הפעלה מיועדת
+									</label>
+									<input
+										:id="`time-window-next-${timeWindow.id}`"
+										v-model="timeWindow.nextActivationTime"
+										type="time"
+									/>
+								</div>
+							</div>
+							<label class="checkbox-row">
+								<input v-model="timeWindow.isActive" type="checkbox" />
+								<span>חלון זה פעיל עכשיו</span>
+							</label>
+							<div
+								v-if="timeWindow.type === TIME_WINDOW_TYPE_CHILDREN"
+								class="form-grid"
+							>
+								<div>
+									<label :for="`time-window-min-${timeWindow.id}`">
+										ממספר ילדים
+									</label>
+									<input
+										:id="`time-window-min-${timeWindow.id}`"
+										v-model="timeWindow.minChildren"
+										type="number"
+										min="0"
+										placeholder="ללא מינימום"
+									/>
+								</div>
+								<div>
+									<label :for="`time-window-max-${timeWindow.id}`">
+										עד מספר ילדים
+									</label>
+									<input
+										:id="`time-window-max-${timeWindow.id}`"
+										v-model="timeWindow.maxChildren"
+										type="number"
+										min="0"
+										placeholder="ללא מקסימום"
+									/>
+								</div>
+							</div>
+							<div v-else class="time-window-last-names">
+								<label :for="`time-window-names-${timeWindow.id}`">
+									שמות משפחה
+								</label>
+								<textarea
+									:id="`time-window-names-${timeWindow.id}`"
+									v-model="timeWindow.lastNamesText"
+									rows="4"
+									placeholder="כהן&#10;לוי&#10;חדד"
+								/>
+								<p class="hint">
+									אפשר לכתוב שם אחד בכל שורה או להפריד בפסיקים.
+								</p>
+							</div>
+							<p class="hint">
+								שעת היעד שתוצג למשתמש: <strong>{{
+									formatTimeWindowSchedule(timeWindow)
+								}}</strong>
+							</p>
+						</section>
+					</div>
+				</div>
+			</section>
+
+			<section class="card">
 				<h2>OCR לזיהוי תמונה</h2>
 				<div class="ocr-settings">
 					<p class="hint">
@@ -592,6 +762,19 @@ import {
 	loginWithRole,
 	setStoredOcrProvider,
 } from "../utils/api";
+import {
+	TIME_WINDOW_TYPE_CHILDREN,
+	TIME_WINDOW_TYPE_LAST_NAME,
+	buildEmptyTimeWindow,
+	cloneTimeWindowSettings,
+	describeTimeWindowCriteria,
+	fetchTimeWindowsSettingsFromServer,
+	formatTimeWindowLabel,
+	formatTimeWindowSchedule,
+	getStoredTimeWindowsSettings,
+	saveTimeWindowsSettingsToServer,
+	setStoredTimeWindowsSettings,
+} from "../utils/timeWindows";
 
 function cleanText(value) {
 	return value === undefined || value === null ? "" : String(value).trim();
@@ -737,6 +920,11 @@ export default {
 				confirmPassword: "",
 			},
 			saveUsersPasswordLoading: false,
+			TIME_WINDOW_TYPE_CHILDREN,
+			TIME_WINDOW_TYPE_LAST_NAME,
+			timeWindowSettingsForm: cloneTimeWindowSettings(
+				getStoredTimeWindowsSettings()
+			),
 		};
 	},
 	computed: {
@@ -812,6 +1000,21 @@ export default {
 		effectiveOcrApiUrlPreview() {
 			return buildConfiguredOcrApiUrl(OCR_API_URL, this.ocrProvider);
 		},
+		activeTimeWindowLabels() {
+			return this.timeWindowSettingsForm.windows
+				.filter((timeWindow) => timeWindow.isActive)
+				.map((timeWindow) => formatTimeWindowLabel(timeWindow));
+		},
+		scheduledTimeWindowLabels() {
+			return this.timeWindowSettingsForm.windows
+				.filter((timeWindow) => !timeWindow.isActive)
+				.map(
+					(timeWindow) =>
+						`${formatTimeWindowLabel(timeWindow)} - ${formatTimeWindowSchedule(
+							timeWindow
+						)}`
+				);
+		},
 		previewRows() {
 			return this.csvRows
 				.map((row, index) => ({
@@ -827,6 +1030,7 @@ export default {
 		},
 	},
 	async mounted() {
+		this.loadTimeWindowSettings();
 		this.isAuthenticated = Boolean(getStoredToken("admin"));
 		if (this.isAuthenticated) {
 			await this.refreshData();
@@ -837,8 +1041,63 @@ export default {
 			this.statusMessage = message;
 			this.statusType = type;
 		},
+		describeTimeWindowCriteria,
+		formatTimeWindowSchedule,
 		getAdminToken() {
 			return getStoredToken("admin");
+		},
+		async loadTimeWindowSettings() {
+			const timeWindowsSettings = await fetchTimeWindowsSettingsFromServer();
+			this.timeWindowSettingsForm = cloneTimeWindowSettings(
+				timeWindowsSettings || getStoredTimeWindowsSettings()
+			);
+		},
+		addTimeWindow(type) {
+			this.timeWindowSettingsForm.windows.push(buildEmptyTimeWindow(type));
+		},
+		addChildrenTimeWindow() {
+			this.addTimeWindow(TIME_WINDOW_TYPE_CHILDREN);
+		},
+		addLastNameTimeWindow() {
+			this.addTimeWindow(TIME_WINDOW_TYPE_LAST_NAME);
+		},
+		handleTimeWindowTypeChange(index, nextType) {
+			const currentWindow = this.timeWindowSettingsForm.windows[index];
+			if (!currentWindow) {
+				return;
+			}
+
+			this.timeWindowSettingsForm.windows.splice(index, 1, {
+				...buildEmptyTimeWindow(nextType),
+				id: currentWindow.id,
+				label: currentWindow.label,
+				isActive: currentWindow.isActive,
+				nextActivationTime: currentWindow.nextActivationTime,
+			});
+		},
+		removeTimeWindow(timeWindowId) {
+			this.timeWindowSettingsForm.windows = this.timeWindowSettingsForm.windows.filter(
+				(timeWindow) => timeWindow.id !== timeWindowId
+			);
+		},
+		async saveTimeWindowSettings() {
+			try {
+				const normalizedSettings = await saveTimeWindowsSettingsToServer(
+					this.timeWindowSettingsForm,
+					this.getAdminToken()
+				);
+				this.timeWindowSettingsForm = cloneTimeWindowSettings(normalizedSettings);
+				this.setStatus(
+					normalizedSettings.enabled
+						? "חלונות הזמן נשמרו בשרת וייכנסו לפעולה לכל המשתמשים."
+						: "חלונות הזמן נשמרו בשרת, אבל האכיפה כבויה כרגע לכל המשתמשים."
+				);
+			} catch (error) {
+				this.setStatus(error.message, "error");
+				if (error.status === 401 || error.status === 403) {
+					this.logout();
+				}
+			}
 		},
 		getSourceColumnLabel(sourceKey) {
 			const sourceColumn = this.csvColumns.find(
@@ -1248,6 +1507,10 @@ export default {
 				this.reportRecipientsText = (data.reportRecipients || []).join("\n");
 				this.reportRecipientsSource = data.reportRecipientsSource || "none";
 				this.reportRecipientHistory = data.reportRecipientHistory || [];
+				setStoredTimeWindowsSettings(data.timeWindowsSettings || {});
+				this.timeWindowSettingsForm = cloneTimeWindowSettings(
+					data.timeWindowsSettings || getStoredTimeWindowsSettings()
+				);
 				this.importColumnsMeta =
 					data.importColumnsMeta ||
 					(data.importColumns || []).map((column) => ({
@@ -1663,6 +1926,7 @@ export default {
 				isDefault: false,
 				scope: "global",
 			};
+			this.loadTimeWindowSettings();
 			this.resetImportSelection();
 			this.statusMessage = "";
 		},
@@ -1879,6 +2143,47 @@ button:disabled {
 
 .preset-summary {
 	margin-bottom: 0;
+}
+
+.time-window-settings {
+	display: grid;
+	gap: 16px;
+}
+
+.time-window-summary {
+	display: grid;
+	gap: 8px;
+}
+
+.time-window-list {
+	display: grid;
+	gap: 14px;
+}
+
+.time-window-item {
+	display: grid;
+	gap: 14px;
+	padding: 18px;
+	border-radius: 22px;
+	background: rgba(255, 248, 236, 0.72);
+	border: 1px solid rgba(24, 53, 46, 0.08);
+}
+
+.time-window-item-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	gap: 12px;
+}
+
+.time-window-item-header h3 {
+	margin: 0 0 6px;
+	color: var(--color-primary);
+}
+
+.time-window-last-names {
+	display: grid;
+	gap: 8px;
 }
 
 .ocr-url-preview {
@@ -2139,7 +2444,8 @@ button:disabled {
 	.card-header,
 	.table-set-row,
 	.preview-row-header,
-	.worksheet-option {
+	.worksheet-option,
+	.time-window-item-header {
 		flex-direction: column;
 		align-items: flex-start;
 	}

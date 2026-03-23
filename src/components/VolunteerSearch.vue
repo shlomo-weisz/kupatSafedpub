@@ -95,14 +95,38 @@
 								<button
 									v-if="!result.received"
 									@click="markReceived"
-									class="mark-button"
+									:disabled="resultTimeWindowDecision.isBlocked"
+									:class="[
+										'mark-button',
+										{ 'mark-button--disabled': resultTimeWindowDecision.isBlocked },
+									]"
 								>
-									סמן כקיבל
+									{{
+										resultTimeWindowDecision.isBlocked
+											? "חלון הזמן לא פעיל"
+											: "סמן כקיבל"
+									}}
+								</button>
+								<button
+									v-if="!result.received && resultTimeWindowDecision.isBlocked"
+									@click="approveTimeWindowOverride"
+									class="admin-override-button"
+								>
+									אישור מנהל וסימון בכל זאת
 								</button>
 								<button @click="openUpdateForm" class="update-button">
 									עדכן נתונים
 								</button>
 							</div>
+						</div>
+						<div
+							v-if="!result.received && resultTimeWindowDecision.isBlocked"
+							class="time-window-warning"
+						>
+							<p class="time-window-warning-title">
+								חלון הזמן של המשפחה עדיין לא פעיל
+							</p>
+							<p>{{ resultTimeWindowDecision.blockedMessage }}</p>
 						</div>
 						<ul class="result-list">
 							<li><strong>קהילה:</strong> {{ formatValue(result.comunity) }}</li>
@@ -129,6 +153,18 @@
 								{{ formatValue(result.married_children) }}
 							</li>
 							<li><strong>סך הכל ילדים:</strong> {{ formatValue(result.total_children) }}</li>
+							<li
+								v-if="!result.received && resultTimeWindowDecision.primaryWindow"
+							>
+								<strong>חלון זמן:</strong>
+								{{ formatTimeWindowLabel(resultTimeWindowDecision.primaryWindow) }}
+							</li>
+							<li
+								v-if="!result.received && resultTimeWindowDecision.primaryWindow"
+							>
+								<strong>שעת יעד:</strong>
+								{{ formatTimeWindowSchedule(resultTimeWindowDecision.primaryWindow) }}
+							</li>
 							<li v-if="result.received">
 								<strong>שם מתנדב שנתן:</strong>
 								{{ formatValue(result.volunteer_name) }}
@@ -266,6 +302,39 @@
 				<p class="popup-countdown">החלונית תיסגר אוטומטית בעוד {{ juiceSecondsLeft }} שניות.</p>
 			</div>
 		</div>
+
+		<div
+			v-if="showTimeWindowPopup && result && resultTimeWindowDecision.isBlocked"
+			class="popup-overlay"
+			@click.self="closeTimeWindowPopup"
+		>
+			<div
+				class="popup-content popup-content--warning"
+				role="dialog"
+				aria-modal="true"
+				aria-labelledby="time-window-title"
+			>
+				<button class="popup-close" @click="closeTimeWindowPopup" aria-label="סגור">
+					×
+				</button>
+				<h3 id="time-window-title">חלון הזמן עדיין לא פעיל</h3>
+				<p>{{ resultTimeWindowDecision.blockedMessage }}</p>
+				<p v-if="resultTimeWindowDecision.primaryBlockedWindow">
+					<strong>חלון זמן:</strong>
+					{{ formatTimeWindowLabel(resultTimeWindowDecision.primaryBlockedWindow) }}
+				</p>
+				<p v-if="resultTimeWindowDecision.primaryBlockedWindow">
+					<strong>שעה מיועדת:</strong>
+					{{ formatTimeWindowSchedule(resultTimeWindowDecision.primaryBlockedWindow) }}
+				</p>
+				<div class="update-actions">
+					<button class="admin-override-button" @click="approveTimeWindowOverride">
+						אישור מנהל וסימון בכל זאת
+					</button>
+					<button class="cancel-button" @click="closeTimeWindowPopup">סגור</button>
+				</div>
+			</div>
+		</div>
 	</div>
 </template>
 
@@ -284,6 +353,13 @@ import {
 	loginWithRole,
 	setStoredVolunteerName,
 } from "../utils/api";
+import {
+	evaluateCustomerTimeWindows,
+	fetchTimeWindowsSettingsFromServer,
+	formatTimeWindowLabel,
+	formatTimeWindowSchedule,
+	getStoredTimeWindowsSettings,
+} from "../utils/timeWindows";
 
 async function readJsonResponse(response) {
 	const data = await response.json();
@@ -327,8 +403,16 @@ export default {
 			juiceSecondsLeft: 6,
 			juicePopupIntervalId: null,
 			juicePopupTimeoutId: null,
+			timeWindowRefreshIntervalId: null,
 			statsIntervalId: null,
+			timeWindowSettings: getStoredTimeWindowsSettings(),
+			showTimeWindowPopup: false,
 		};
+	},
+	computed: {
+		resultTimeWindowDecision() {
+			return evaluateCustomerTimeWindows(this.result, this.timeWindowSettings);
+		},
 	},
 	watch: {
 		volunteerName(newValue) {
@@ -337,12 +421,19 @@ export default {
 	},
 	mounted() {
 		this.volunteerName = getStoredVolunteerName();
+		this.loadTimeWindowSettings();
 		this.updateTaken();
 		this.statsIntervalId = window.setInterval(this.updateTaken, 60000);
+		this.timeWindowRefreshIntervalId = window.setInterval(() => {
+			this.syncTimeWindowSettingsSilently();
+		}, 30000);
 	},
 	beforeUnmount() {
 		if (this.statsIntervalId) {
 			clearInterval(this.statsIntervalId);
+		}
+		if (this.timeWindowRefreshIntervalId) {
+			clearInterval(this.timeWindowRefreshIntervalId);
 		}
 		if (this.juicePopupIntervalId) {
 			clearInterval(this.juicePopupIntervalId);
@@ -352,6 +443,8 @@ export default {
 		}
 	},
 	methods: {
+		formatTimeWindowLabel,
+		formatTimeWindowSchedule,
 		async ensureUsersToken() {
 			let token = getStoredToken("users");
 			if (token) {
@@ -365,6 +458,34 @@ export default {
 
 			token = await loginWithRole("users", password);
 			return token;
+		},
+		async loadTimeWindowSettings() {
+			this.timeWindowSettings = await fetchTimeWindowsSettingsFromServer();
+		},
+		async syncTimeWindowSettingsSilently() {
+			await this.loadTimeWindowSettings();
+			if (this.result) {
+				this.openTimeWindowPopupForCurrentResult();
+			}
+		},
+		openTimeWindowPopupForCurrentResult() {
+			this.showTimeWindowPopup =
+				Boolean(this.result) &&
+				!this.result.received &&
+				this.resultTimeWindowDecision.isBlocked;
+		},
+		closeTimeWindowPopup() {
+			this.showTimeWindowPopup = false;
+		},
+		async requestAdminTimeWindowApproval() {
+			const password = window.prompt(
+				"נדרשת סיסמת מנהל כדי לאשר חריגה מחלון הזמן:"
+			);
+			if (!password) {
+				throw new Error("האישור בוטל.");
+			}
+
+			await loginWithRole("admin", password);
 		},
 		async updateTaken() {
 			try {
@@ -411,6 +532,7 @@ export default {
 			this.result = null;
 			this.lastNameResults = [];
 			this.lastNameSearchError = null;
+			this.closeTimeWindowPopup();
 
 			if (this.idActive && this.idNumber) {
 				await this.searchByIdOrPhone("id");
@@ -441,7 +563,12 @@ export default {
 				this.result = data.success ? data.customer : null;
 				if (!this.result) {
 					alert("לא נמצאו תוצאות לחיפוש.");
+					this.closeTimeWindowPopup();
+					return;
 				}
+
+				await this.loadTimeWindowSettings();
+				this.openTimeWindowPopupForCurrentResult();
 			} catch (error) {
 				console.error(`Error fetching data by ${type}:`, error);
 				alert("שגיאה בחיפוש, אנא נסה שוב.");
@@ -490,6 +617,7 @@ export default {
 			this.lastNameResults = [];
 			this.lastNameSearchError = null;
 			this.result = null;
+			this.closeTimeWindowPopup();
 		},
 		copyMotherId(motherId) {
 			this.copyFatherId(motherId);
@@ -504,6 +632,7 @@ export default {
 			this.lastNameResults = [];
 			this.lastNameSearchError = null;
 			this.result = null;
+			this.closeTimeWindowPopup();
 		},
 		copyMotherPhone(motherPhone) {
 			this.copyFatherPhone(motherPhone);
@@ -540,7 +669,21 @@ export default {
 			}
 			this.showJuicePopup = false;
 		},
-		async markReceived() {
+		async performMarkReceived(options = {}) {
+			if (!this.result) {
+				return;
+			}
+
+			await this.loadTimeWindowSettings();
+			const decision = evaluateCustomerTimeWindows(
+				this.result,
+				this.timeWindowSettings
+			);
+			if (!options.bypassTimeWindow && decision.isBlocked) {
+				this.showTimeWindowPopup = true;
+				return;
+			}
+
 			try {
 				const token = await this.ensureUsersToken();
 				const response = await fetch(buildApiUrl("/mark"), {
@@ -561,6 +704,7 @@ export default {
 					this.openJuicePopup();
 				}
 
+				this.closeTimeWindowPopup();
 				this.totalTaken = res.totalTaken;
 				this.lastReceived = this.result;
 				this.percentageTaken = res.percentageTaken;
@@ -571,6 +715,19 @@ export default {
 					clearStoredToken("users");
 				}
 				alert(error.message);
+			}
+		},
+		async markReceived() {
+			await this.performMarkReceived();
+		},
+		async approveTimeWindowOverride() {
+			try {
+				await this.requestAdminTimeWindowApproval();
+				await this.performMarkReceived({ bypassTimeWindow: true });
+			} catch (error) {
+				if (error.message !== "האישור בוטל.") {
+					alert("סיסמת המנהל שגויה או שהשרת לא זמין.");
+				}
 			}
 		},
 		resetSearch() {
@@ -584,6 +741,7 @@ export default {
 			this.lastNameResults = [];
 			this.lastNameSearchError = null;
 			this.showUpdateForm = false;
+			this.closeTimeWindowPopup();
 			this.$nextTick(() => {
 				if (this.$refs.idInput && typeof this.$refs.idInput.focus === "function") {
 					this.$refs.idInput.focus();
@@ -651,6 +809,8 @@ export default {
 				const data = await readJsonResponse(response);
 				alert("הנתונים עודכנו בהצלחה.");
 				this.result = data.customer;
+				await this.loadTimeWindowSettings();
+				this.openTimeWindowPopupForCurrentResult();
 				this.closeUpdateForm();
 			} catch (error) {
 				if (error.status === 401 || error.status === 403) {
@@ -847,8 +1007,18 @@ button:disabled {
 	background: linear-gradient(135deg, var(--color-success), #47a16f);
 }
 
+.mark-button--disabled {
+	background: rgba(182, 79, 71, 0.24);
+	color: #7a2418;
+	border-color: rgba(182, 79, 71, 0.18);
+}
+
 .update-button {
 	background: linear-gradient(135deg, var(--color-accent), #9f4f2b);
+}
+
+.admin-override-button {
+	background: linear-gradient(135deg, #b15b35, #8a3c1a);
 }
 
 .copy-button {
@@ -902,6 +1072,28 @@ button:disabled {
 	display: flex;
 	gap: 10px;
 	flex-wrap: wrap;
+}
+
+.time-window-warning {
+	margin-bottom: 18px;
+	padding: 16px 18px;
+	border-radius: 18px;
+	background: rgba(182, 79, 71, 0.14);
+	border: 1px solid rgba(182, 79, 71, 0.18);
+	display: grid;
+	gap: 8px;
+}
+
+.time-window-warning-title {
+	margin: 0;
+	font-weight: 800;
+	color: #7a2418;
+}
+
+.time-window-warning p:last-child {
+	margin: 0;
+	line-height: 1.7;
+	color: #7a2418;
 }
 
 .received-message {
@@ -1020,6 +1212,10 @@ button:disabled {
 	text-align: right;
 	position: relative;
 	border: 1px solid rgba(24, 53, 46, 0.12);
+}
+
+.popup-content--warning {
+	border-color: rgba(182, 79, 71, 0.22);
 }
 
 .popup-content h3 {

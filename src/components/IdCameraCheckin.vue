@@ -157,6 +157,38 @@
 						</div>
 						<div
 							v-if="
+								scanState.timeWindowDecision &&
+								scanState.timeWindowDecision.primaryBlockedWindow
+							"
+							class="detail-row"
+						>
+							<span>חלון זמן</span>
+							<strong>
+								{{
+									formatTimeWindowLabel(
+										scanState.timeWindowDecision.primaryBlockedWindow
+									)
+								}}
+							</strong>
+						</div>
+						<div
+							v-if="
+								scanState.timeWindowDecision &&
+								scanState.timeWindowDecision.primaryBlockedWindow
+							"
+							class="detail-row"
+						>
+							<span>שעה מיועדת</span>
+							<strong>
+								{{
+									formatTimeWindowSchedule(
+										scanState.timeWindowDecision.primaryBlockedWindow
+									)
+								}}
+							</strong>
+						</div>
+						<div
+							v-if="
 								scanState.customer &&
 								scanState.customer.received &&
 								scanState.customer.volunteer_name
@@ -182,6 +214,16 @@
 					<p v-if="scanState.duplicateNotice" class="scan-duplicate-note">
 						{{ scanState.duplicateNotice }}
 					</p>
+
+					<button
+						v-if="scanState.allowAdminOverride"
+						type="button"
+						class="primary-button scan-override-button"
+						:disabled="processing"
+						@click="approveTimeWindowOverride"
+					>
+						אישור מנהל וסימון בכל זאת
+					</button>
 
 					<button
 						type="button"
@@ -213,6 +255,13 @@ import {
 	loginWithRole,
 	setStoredVolunteerName,
 } from "../utils/api";
+import {
+	evaluateCustomerTimeWindows,
+	fetchTimeWindowsSettingsFromServer,
+	formatTimeWindowLabel,
+	formatTimeWindowSchedule,
+	getStoredTimeWindowsSettings,
+} from "../utils/timeWindows";
 import VolunteerNameInput from "./VolunteerNameInput.vue";
 import myLogo from "./myLogo.vue";
 const CAMERA_CAPTURE_QUALITY = 0.97;
@@ -372,6 +421,8 @@ function buildInitialScanState() {
 		extractedId: "",
 		customer: null,
 		duplicateNotice: "",
+		timeWindowDecision: null,
+		allowAdminOverride: false,
 	};
 }
 
@@ -383,6 +434,8 @@ function buildScanState(kind, title, message, options = {}) {
 		extractedId: options.extractedId || "",
 		customer: options.customer || null,
 		duplicateNotice: options.duplicateNotice || "",
+		timeWindowDecision: options.timeWindowDecision || null,
+		allowAdminOverride: Boolean(options.allowAdminOverride),
 	};
 }
 
@@ -503,6 +556,7 @@ export default {
 			cameraError: "",
 			processing: false,
 			scanState: buildInitialScanState(),
+			timeWindowSettings: getStoredTimeWindowsSettings(),
 		};
 	},
 	watch: {
@@ -513,6 +567,7 @@ export default {
 	mounted() {
 		this.volunteerName = getStoredVolunteerName();
 		this.ocrApiUrl = buildConfiguredOcrApiUrl(OCR_API_URL);
+		this.loadTimeWindowSettings();
 		this.addDebugLog("screen-mounted", window.location.href);
 		this.addDebugLog("ocr-url", this.ocrApiUrl || "missing");
 		if (typeof navigator !== "undefined" && navigator.userAgent) {
@@ -527,6 +582,8 @@ export default {
 		this.stopCamera();
 	},
 	methods: {
+		formatTimeWindowLabel,
+		formatTimeWindowSchedule,
 		addDebugLog(label, details = "") {
 			if (!this.scanDebugEnabled) {
 				return;
@@ -548,6 +605,9 @@ export default {
 		clearDebugEvents() {
 			this.debugEvents = [];
 			this.addDebugLog("debug-cleared");
+		},
+		async loadTimeWindowSettings() {
+			this.timeWindowSettings = await fetchTimeWindowsSettingsFromServer();
 		},
 		describeError(error) {
 			if (!error) {
@@ -663,6 +723,16 @@ export default {
 			token = await loginWithRole("users", password);
 			this.isAuthorized = true;
 			return token;
+		},
+		async requestAdminTimeWindowApproval() {
+			const password = window.prompt(
+				"נדרשת סיסמת מנהל כדי לאשר חריגה מחלון הזמן:"
+			);
+			if (!password) {
+				throw new Error("האישור בוטל.");
+			}
+
+			await loginWithRole("admin", password);
 		},
 		async exportCaptureFile(source, cropRect) {
 			const canvas = this.$refs.captureCanvas;
@@ -923,6 +993,20 @@ export default {
 				throw error;
 			}
 		},
+		async completeScanMark(customer, idNumber, duplicateNotice) {
+			await this.markCustomer(customer.id);
+			const refreshedMatch = await this.searchCustomerById(idNumber);
+			return buildScanState(
+				"success",
+				"הקבלה סומנה בהצלחה",
+				"המשפחה סומנה עכשיו כמי שקיבלה דרך מסך הצילום.",
+				{
+					extractedId: idNumber,
+					customer: refreshedMatch?.customer || customer,
+					duplicateNotice,
+				}
+			);
+		},
 		async processExtractedId(idNumber) {
 			const foundMatch = await this.searchCustomerById(idNumber);
 			if (!foundMatch || !foundMatch.customer) {
@@ -953,18 +1037,87 @@ export default {
 				);
 			}
 
-			await this.markCustomer(customer.id);
-			const refreshedMatch = await this.searchCustomerById(idNumber);
-			return buildScanState(
-				"success",
-				"הקבלה סומנה בהצלחה",
-				"המשפחה סומנה עכשיו כמי שקיבלה דרך מסך הצילום.",
-				{
-					extractedId: idNumber,
-					customer: refreshedMatch?.customer || customer,
-					duplicateNotice,
-				}
+			await this.loadTimeWindowSettings();
+			const timeWindowDecision = evaluateCustomerTimeWindows(
+				customer,
+				this.timeWindowSettings
 			);
+			if (timeWindowDecision.isBlocked) {
+				return buildScanState(
+					"error",
+					"חלון הזמן עדיין לא פעיל",
+					timeWindowDecision.blockedMessage,
+					{
+						extractedId: idNumber,
+						customer,
+						duplicateNotice,
+						timeWindowDecision,
+						allowAdminOverride: true,
+					}
+				);
+			}
+
+			return this.completeScanMark(customer, idNumber, duplicateNotice);
+		},
+		async approveTimeWindowOverride() {
+			if (
+				!this.scanState.allowAdminOverride ||
+				!this.scanState.customer ||
+				!this.scanState.extractedId
+			) {
+				return;
+			}
+
+			const blockedCustomer = this.scanState.customer;
+			const extractedId = this.scanState.extractedId;
+			const duplicateNotice = this.scanState.duplicateNotice;
+			const timeWindowDecision = this.scanState.timeWindowDecision;
+
+			this.processing = true;
+			try {
+				await this.requestAdminTimeWindowApproval();
+				this.scanState = buildScanState(
+					"processing",
+					"מאשר חריגה מחלון הזמן",
+					"אישור המנהל התקבל, מסמן את המשפחה כמי שקיבלה."
+				);
+				this.scanState = await this.completeScanMark(
+					blockedCustomer,
+					extractedId,
+					duplicateNotice
+				);
+			} catch (error) {
+				if (error.message === "האישור בוטל.") {
+					this.scanState = buildScanState(
+						"error",
+						"חלון הזמן עדיין לא פעיל",
+						timeWindowDecision?.blockedMessage ||
+							"לא ניתן לסמן את המשפחה כי חלון הזמן שלה עדיין לא פעיל.",
+						{
+							extractedId,
+							customer: blockedCustomer,
+							duplicateNotice,
+							timeWindowDecision,
+							allowAdminOverride: true,
+						}
+					);
+				} else {
+					this.scanState = buildScanState(
+						"error",
+						"אישור מנהל נכשל",
+						"סיסמת המנהל שגויה או שהשרת לא זמין.",
+						{
+							extractedId,
+							customer: blockedCustomer,
+							duplicateNotice,
+							timeWindowDecision,
+							allowAdminOverride: true,
+						}
+					);
+				}
+			} finally {
+				this.processing = false;
+			}
 		},
 		async captureAndProcess() {
 			if (!this.volunteerName.trim()) {
@@ -1330,6 +1483,11 @@ export default {
 	color: #7a4c2d;
 	font-weight: 700;
 	line-height: 1.7;
+}
+
+.scan-override-button {
+	justify-self: start;
+	background: linear-gradient(135deg, #b15b35, #8a3c1a);
 }
 
 .scan-reset-button {
