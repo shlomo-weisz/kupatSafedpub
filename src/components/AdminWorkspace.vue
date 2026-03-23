@@ -748,6 +748,85 @@
 			</section>
 
 			<section class="card">
+				<h2>פופאפ למשפחות גדולות</h2>
+				<div class="time-window-settings">
+					<p class="hint">
+						כאן אפשר להחליט אם להציג פופאפ אחרי סימון קבלה, לקבוע מאיזה
+						מספר ילדים הוא יופעל, לבחור אם הספירה תהיה רק של ילדים לא
+						נשואים או של כלל הילדים, ומה תהיה ההודעה שתופיע לכל הלקוחות.
+					</p>
+					<label class="checkbox-row">
+						<input v-model="juicePopupSettingsForm.enabled" type="checkbox" />
+						<span>הפעל פופאפ אחרי סימון קבלה</span>
+					</label>
+					<p class="hint">
+						{{
+							juicePopupSettingsForm.enabled
+								? `הפופאפ פעיל כרגע לכל המשתמשים למשפחות עם ${juicePopupSettingsForm.minChildrenThreshold} ${formatJuicePopupCountLabel(juicePopupSettingsForm)} ומעלה.`
+								: "הפופאפ כבוי כרגע לכל המשתמשים."
+						}}
+					</p>
+					<div class="form-grid">
+						<div>
+							<label for="juicePopupCountMode">סוג ספירת הילדים</label>
+							<select
+								id="juicePopupCountMode"
+								v-model="juicePopupSettingsForm.childCountMode"
+							>
+								<option :value="JUICE_POPUP_COUNT_MODE_UNMARRIED">
+									רק ילדים לא נשואים
+								</option>
+								<option :value="JUICE_POPUP_COUNT_MODE_TOTAL">
+									כלל הילדים
+								</option>
+							</select>
+						</div>
+						<div>
+							<label for="juicePopupMinChildren">
+								הפעל החל ממספר
+								{{ formatJuicePopupCountLabel(juicePopupSettingsForm) }}
+							</label>
+							<input
+								id="juicePopupMinChildren"
+								v-model.number="juicePopupSettingsForm.minChildrenThreshold"
+								type="number"
+								min="0"
+								placeholder="7"
+							/>
+						</div>
+						<div>
+							<label for="juicePopupTitle">כותרת הפופאפ</label>
+							<input
+								id="juicePopupTitle"
+								v-model.trim="juicePopupSettingsForm.title"
+								type="text"
+								placeholder="מגיע מיץ ענבים"
+							/>
+						</div>
+					</div>
+					<div class="time-window-last-names">
+						<label for="juicePopupMessage">הודעת הפופאפ</label>
+						<textarea
+							id="juicePopupMessage"
+							v-model="juicePopupSettingsForm.message"
+							rows="4"
+							placeholder="למשפחה זו יש {count} {countLabel}. מגיעה זכאות למיץ ענבים."
+						/>
+						<p class="hint">
+							אפשר להשתמש במשתנים <code>{count}</code>,
+							<code>{threshold}</code>, <code>{lastName}</code> ו־<code>{countLabel}</code>.
+						</p>
+					</div>
+					<div class="preset-actions">
+						<button class="secondary" @click="loadJuicePopupSettings">
+							טען הגדרה שמורה
+						</button>
+						<button @click="saveJuicePopupSettings">שמור הגדרת פופאפ</button>
+					</div>
+				</div>
+			</section>
+
+			<section class="card">
 				<h2>OCR לזיהוי תמונה</h2>
 				<div class="ocr-settings">
 					<p class="hint">
@@ -803,17 +882,25 @@ import {
 	setStoredOcrProvider,
 } from "../utils/api";
 import {
+	JUICE_POPUP_COUNT_MODE_TOTAL,
+	JUICE_POPUP_COUNT_MODE_UNMARRIED,
 	TIME_WINDOW_TYPE_CHILDREN,
 	TIME_WINDOW_TYPE_LAST_NAME,
 	TIME_WINDOW_TYPE_LAST_NAME_INITIAL,
 	buildEmptyTimeWindow,
+	cloneJuicePopupSettings,
 	cloneTimeWindowSettings,
 	describeTimeWindowCriteria,
+	fetchJuicePopupSettingsFromServer,
 	fetchTimeWindowsSettingsFromServer,
+	formatJuicePopupCountLabel,
 	formatTimeWindowLabel,
 	formatTimeWindowSchedule,
+	getStoredJuicePopupSettings,
 	getStoredTimeWindowsSettings,
+	saveJuicePopupSettingsToServer,
 	saveTimeWindowsSettingsToServer,
+	setStoredJuicePopupSettings,
 	setStoredTimeWindowsSettings,
 } from "../utils/timeWindows";
 
@@ -961,9 +1048,14 @@ export default {
 				confirmPassword: "",
 			},
 			saveUsersPasswordLoading: false,
+			JUICE_POPUP_COUNT_MODE_TOTAL,
+			JUICE_POPUP_COUNT_MODE_UNMARRIED,
 			TIME_WINDOW_TYPE_CHILDREN,
 			TIME_WINDOW_TYPE_LAST_NAME,
 			TIME_WINDOW_TYPE_LAST_NAME_INITIAL,
+			juicePopupSettingsForm: cloneJuicePopupSettings(
+				getStoredJuicePopupSettings()
+			),
 			timeWindowSettingsForm: cloneTimeWindowSettings(
 				getStoredTimeWindowsSettings()
 			),
@@ -1073,6 +1165,7 @@ export default {
 	},
 	async mounted() {
 		this.loadTimeWindowSettings();
+		this.loadJuicePopupSettings();
 		this.isAuthenticated = Boolean(getStoredToken("admin"));
 		if (this.isAuthenticated) {
 			await this.refreshData();
@@ -1084,6 +1177,7 @@ export default {
 			this.statusType = type;
 		},
 		describeTimeWindowCriteria,
+		formatJuicePopupCountLabel,
 		formatTimeWindowSchedule,
 		getAdminToken() {
 			return getStoredToken("admin");
@@ -1092,6 +1186,12 @@ export default {
 			const timeWindowsSettings = await fetchTimeWindowsSettingsFromServer();
 			this.timeWindowSettingsForm = cloneTimeWindowSettings(
 				timeWindowsSettings || getStoredTimeWindowsSettings()
+			);
+		},
+		async loadJuicePopupSettings() {
+			const juicePopupSettings = await fetchJuicePopupSettingsFromServer();
+			this.juicePopupSettingsForm = cloneJuicePopupSettings(
+				juicePopupSettings || getStoredJuicePopupSettings()
 			);
 		},
 		addTimeWindow(type) {
@@ -1136,6 +1236,25 @@ export default {
 					normalizedSettings.enabled
 						? "חלונות הזמן נשמרו בשרת וייכנסו לפעולה לכל המשתמשים."
 						: "חלונות הזמן נשמרו בשרת, אבל האכיפה כבויה כרגע לכל המשתמשים."
+				);
+			} catch (error) {
+				this.setStatus(error.message, "error");
+				if (error.status === 401 || error.status === 403) {
+					this.logout();
+				}
+			}
+		},
+		async saveJuicePopupSettings() {
+			try {
+				const normalizedSettings = await saveJuicePopupSettingsToServer(
+					this.juicePopupSettingsForm,
+					this.getAdminToken()
+				);
+				this.juicePopupSettingsForm = cloneJuicePopupSettings(normalizedSettings);
+				this.setStatus(
+					normalizedSettings.enabled
+						? "הגדרת הפופאפ נשמרה בשרת ותופעל לכל המשתמשים לפי התנאי שהוגדר."
+						: "הגדרת הפופאפ נשמרה בשרת, והפופאפ כבוי כרגע לכל המשתמשים."
 				);
 			} catch (error) {
 				this.setStatus(error.message, "error");
@@ -1553,8 +1672,12 @@ export default {
 				this.reportRecipientsSource = data.reportRecipientsSource || "none";
 				this.reportRecipientHistory = data.reportRecipientHistory || [];
 				setStoredTimeWindowsSettings(data.timeWindowsSettings || {});
+				setStoredJuicePopupSettings(data.juicePopupSettings || {});
 				this.timeWindowSettingsForm = cloneTimeWindowSettings(
 					data.timeWindowsSettings || getStoredTimeWindowsSettings()
+				);
+				this.juicePopupSettingsForm = cloneJuicePopupSettings(
+					data.juicePopupSettings || getStoredJuicePopupSettings()
 				);
 				this.importColumnsMeta =
 					data.importColumnsMeta ||

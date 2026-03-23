@@ -297,8 +297,8 @@
 		<div v-if="showJuicePopup" class="popup-overlay" @click.self="closeJuicePopup">
 			<div class="popup-content" role="dialog" aria-modal="true" aria-labelledby="juice-title">
 				<button class="popup-close" @click="closeJuicePopup" aria-label="סגור">×</button>
-				<h3 id="juice-title">מגיע מיץ ענבים</h3>
-				<p>למשפחה זו יש 7 ילדים לא נשואים או יותר.</p>
+				<h3 id="juice-title">{{ juicePopupTitle }}</h3>
+				<p>{{ juicePopupMessage }}</p>
 				<p class="popup-countdown">החלונית תיסגר אוטומטית בעוד {{ juiceSecondsLeft }} שניות.</p>
 			</div>
 		</div>
@@ -354,11 +354,14 @@ import {
 	setStoredVolunteerName,
 } from "../utils/api";
 import {
+	buildJuicePopupContent,
 	evaluateCustomerTimeWindows,
-	fetchTimeWindowsSettingsFromServer,
+	fetchDistributionSettingsFromServer,
 	formatTimeWindowLabel,
 	formatTimeWindowSchedule,
+	getStoredJuicePopupSettings,
 	getStoredTimeWindowsSettings,
+	shouldShowJuicePopup,
 } from "../utils/timeWindows";
 
 async function readJsonResponse(response) {
@@ -398,7 +401,9 @@ export default {
 			lastNameResults: [],
 			lastNameSearchError: null,
 			lastNameResultsVisible: true,
-			juicePopupEnabled: true,
+			juicePopupSettings: getStoredJuicePopupSettings(),
+			juicePopupTitle: "",
+			juicePopupMessage: "",
 			showJuicePopup: false,
 			juiceSecondsLeft: 6,
 			juicePopupIntervalId: null,
@@ -421,11 +426,11 @@ export default {
 	},
 	mounted() {
 		this.volunteerName = getStoredVolunteerName();
-		this.loadTimeWindowSettings();
+		this.loadSharedSettings();
 		this.updateTaken();
 		this.statsIntervalId = window.setInterval(this.updateTaken, 60000);
 		this.timeWindowRefreshIntervalId = window.setInterval(() => {
-			this.syncTimeWindowSettingsSilently();
+			this.syncSharedSettingsSilently();
 		}, 30000);
 	},
 	beforeUnmount() {
@@ -459,11 +464,13 @@ export default {
 			token = await loginWithRole("users", password);
 			return token;
 		},
-		async loadTimeWindowSettings() {
-			this.timeWindowSettings = await fetchTimeWindowsSettingsFromServer();
+		async loadSharedSettings() {
+			const sharedSettings = await fetchDistributionSettingsFromServer();
+			this.timeWindowSettings = sharedSettings.timeWindowsSettings;
+			this.juicePopupSettings = sharedSettings.juicePopupSettings;
 		},
-		async syncTimeWindowSettingsSilently() {
-			await this.loadTimeWindowSettings();
+		async syncSharedSettingsSilently() {
+			await this.loadSharedSettings();
 			if (this.result) {
 				this.openTimeWindowPopupForCurrentResult();
 			}
@@ -564,7 +571,7 @@ export default {
 					return;
 				}
 
-				await this.loadTimeWindowSettings();
+				await this.loadSharedSettings();
 				this.openTimeWindowPopupForCurrentResult();
 			} catch (error) {
 				console.error(`Error fetching data by ${type}:`, error);
@@ -637,7 +644,7 @@ export default {
 		toggleLastNameResults() {
 			this.lastNameResultsVisible = !this.lastNameResultsVisible;
 		},
-		openJuicePopup() {
+		openJuicePopup(content = {}) {
 			if (this.juicePopupIntervalId) {
 				clearInterval(this.juicePopupIntervalId);
 			}
@@ -645,6 +652,8 @@ export default {
 				clearTimeout(this.juicePopupTimeoutId);
 			}
 			this.juiceSecondsLeft = 6;
+			this.juicePopupTitle = content.title || "הודעה";
+			this.juicePopupMessage = content.message || "";
 			this.showJuicePopup = true;
 			this.juicePopupIntervalId = setInterval(() => {
 				if (this.juiceSecondsLeft > 0) {
@@ -671,7 +680,7 @@ export default {
 				return;
 			}
 
-			await this.loadTimeWindowSettings();
+			await this.loadSharedSettings();
 			const decision = evaluateCustomerTimeWindows(
 				this.result,
 				this.timeWindowSettings
@@ -696,9 +705,10 @@ export default {
 				});
 				const res = await readJsonResponse(response);
 
-				const unmarried = parseInt(this.result?.unmarried_children, 10);
-				if (this.juicePopupEnabled && !Number.isNaN(unmarried) && unmarried >= 7) {
-					this.openJuicePopup();
+				if (shouldShowJuicePopup(this.result, this.juicePopupSettings)) {
+					this.openJuicePopup(
+						buildJuicePopupContent(this.result, this.juicePopupSettings)
+					);
 				}
 
 				this.closeTimeWindowPopup();
@@ -806,7 +816,7 @@ export default {
 				const data = await readJsonResponse(response);
 				alert("הנתונים עודכנו בהצלחה.");
 				this.result = data.customer;
-				await this.loadTimeWindowSettings();
+				await this.loadSharedSettings();
 				this.openTimeWindowPopupForCurrentResult();
 				this.closeUpdateForm();
 			} catch (error) {

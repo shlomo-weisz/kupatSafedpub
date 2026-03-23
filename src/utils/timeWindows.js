@@ -1,9 +1,18 @@
 import { authHeaders, buildApiUrl } from "./api";
 
 const TIME_WINDOWS_STORAGE_KEY = "kupa.timeWindows.v1";
+const JUICE_POPUP_STORAGE_KEY = "kupa.juicePopup.v1";
 const TIME_WINDOW_TYPE_CHILDREN = "children";
 const TIME_WINDOW_TYPE_LAST_NAME = "lastName";
 const TIME_WINDOW_TYPE_LAST_NAME_INITIAL = "lastNameInitial";
+const JUICE_POPUP_COUNT_MODE_UNMARRIED = "unmarried";
+const JUICE_POPUP_COUNT_MODE_TOTAL = "total";
+const DEFAULT_JUICE_POPUP_TITLE = "מגיע מיץ ענבים";
+const LEGACY_DEFAULT_JUICE_POPUP_MESSAGE =
+	"למשפחה זו יש {count} ילדים לא נשואים. מגיעה זכאות למיץ ענבים.";
+const DEFAULT_JUICE_POPUP_MESSAGE =
+	"למשפחה זו יש {count} {countLabel}. מגיעה זכאות למיץ ענבים.";
+const DEFAULT_MIN_UNMARRIED_CHILDREN = 7;
 const HEBREW_LETTER_ORDER = [
 	"א",
 	"ב",
@@ -273,9 +282,83 @@ function normalizeTimeWindowsSettings(inputSettings = {}) {
 	};
 }
 
+function normalizePositiveInteger(value, fallbackValue) {
+	const normalizedValue = cleanText(value);
+	if (normalizedValue === "") {
+		return fallbackValue;
+	}
+
+	const parsedValue = Number.parseInt(normalizedValue, 10);
+	return Number.isInteger(parsedValue) && parsedValue >= 0
+		? parsedValue
+		: fallbackValue;
+}
+
+function normalizeJuicePopupCountMode(value) {
+	return cleanText(value) === JUICE_POPUP_COUNT_MODE_TOTAL
+		? JUICE_POPUP_COUNT_MODE_TOTAL
+		: JUICE_POPUP_COUNT_MODE_UNMARRIED;
+}
+
+function formatJuicePopupCountLabel(settings = {}) {
+	return normalizeJuicePopupCountMode(settings.childCountMode) ===
+		JUICE_POPUP_COUNT_MODE_TOTAL
+		? "ילדים בסך הכל"
+		: "ילדים לא נשואים";
+}
+
+function normalizeJuicePopupSettings(inputSettings = {}) {
+	const normalizedMessage = cleanText(inputSettings.message);
+	return {
+		enabled:
+			inputSettings.enabled === undefined
+				? true
+				: Boolean(inputSettings.enabled),
+		childCountMode: normalizeJuicePopupCountMode(inputSettings.childCountMode),
+		minChildrenThreshold: normalizePositiveInteger(
+			inputSettings.minChildrenThreshold ?? inputSettings.minUnmarriedChildren,
+			DEFAULT_MIN_UNMARRIED_CHILDREN
+		),
+		title: cleanText(inputSettings.title) || DEFAULT_JUICE_POPUP_TITLE,
+		message:
+			!normalizedMessage ||
+			normalizedMessage === LEGACY_DEFAULT_JUICE_POPUP_MESSAGE
+				? DEFAULT_JUICE_POPUP_MESSAGE
+				: normalizedMessage,
+	};
+}
+
+function normalizeSharedDistributionSettings(inputSettings = {}) {
+	if (
+		inputSettings &&
+		typeof inputSettings === "object" &&
+		("timeWindowsSettings" in inputSettings || "juicePopupSettings" in inputSettings)
+	) {
+		return {
+			timeWindowsSettings: normalizeTimeWindowsSettings(
+				inputSettings.timeWindowsSettings
+			),
+			juicePopupSettings: normalizeJuicePopupSettings(
+				inputSettings.juicePopupSettings
+			),
+		};
+	}
+
+	return {
+		timeWindowsSettings: normalizeTimeWindowsSettings(inputSettings),
+		juicePopupSettings: normalizeJuicePopupSettings(),
+	};
+}
+
 function cloneTimeWindowSettings(settings = {}) {
 	return JSON.parse(
 		JSON.stringify(normalizeTimeWindowsSettings(settings))
+	);
+}
+
+function cloneJuicePopupSettings(settings = {}) {
+	return JSON.parse(
+		JSON.stringify(normalizeJuicePopupSettings(settings))
 	);
 }
 
@@ -321,7 +404,35 @@ function setStoredTimeWindowsSettings(settings) {
 	);
 }
 
-async function fetchTimeWindowsSettingsFromServer() {
+function getStoredJuicePopupSettings() {
+	if (typeof window === "undefined" || !window.localStorage) {
+		return normalizeJuicePopupSettings();
+	}
+
+	try {
+		const rawValue = window.localStorage.getItem(JUICE_POPUP_STORAGE_KEY);
+		if (!rawValue) {
+			return normalizeJuicePopupSettings();
+		}
+
+		return normalizeJuicePopupSettings(JSON.parse(rawValue));
+	} catch {
+		return normalizeJuicePopupSettings();
+	}
+}
+
+function setStoredJuicePopupSettings(settings) {
+	if (typeof window === "undefined" || !window.localStorage) {
+		return;
+	}
+
+	window.localStorage.setItem(
+		JUICE_POPUP_STORAGE_KEY,
+		JSON.stringify(normalizeJuicePopupSettings(settings))
+	);
+}
+
+async function fetchDistributionSettingsFromServer() {
 	try {
 		const response = await fetch(buildApiUrl("/time-windows"));
 		const data = await response.json();
@@ -329,19 +440,29 @@ async function fetchTimeWindowsSettingsFromServer() {
 			throw new Error(data.message || "לא ניתן היה לטעון את חלונות הזמן.");
 		}
 
-		const normalizedSettings = normalizeTimeWindowsSettings(
-			data.timeWindowsSettings
-		);
-		setStoredTimeWindowsSettings(normalizedSettings);
+		const normalizedSettings = normalizeSharedDistributionSettings({
+			timeWindowsSettings: data.timeWindowsSettings,
+			juicePopupSettings: data.juicePopupSettings,
+		});
+		setStoredTimeWindowsSettings(normalizedSettings.timeWindowsSettings);
+		setStoredJuicePopupSettings(normalizedSettings.juicePopupSettings);
 		return normalizedSettings;
 	} catch (error) {
-		const cachedSettings = getStoredTimeWindowsSettings();
-		if (cachedSettings.enabled || cachedSettings.windows.length > 0) {
-			return cachedSettings;
-		}
-
-		return normalizeTimeWindowsSettings();
+		return {
+			timeWindowsSettings: getStoredTimeWindowsSettings(),
+			juicePopupSettings: getStoredJuicePopupSettings(),
+		};
 	}
+}
+
+async function fetchTimeWindowsSettingsFromServer() {
+	const normalizedSettings = await fetchDistributionSettingsFromServer();
+	return normalizedSettings.timeWindowsSettings;
+}
+
+async function fetchJuicePopupSettingsFromServer() {
+	const normalizedSettings = await fetchDistributionSettingsFromServer();
+	return normalizedSettings.juicePopupSettings;
 }
 
 async function saveTimeWindowsSettingsToServer(settings, adminToken) {
@@ -363,8 +484,36 @@ async function saveTimeWindowsSettingsToServer(settings, adminToken) {
 		throw error;
 	}
 
-	const normalizedSettings = normalizeTimeWindowsSettings(data.timeWindowsSettings);
+	const normalizedSettings = normalizeTimeWindowsSettings(
+		data.timeWindowsSettings
+	);
 	setStoredTimeWindowsSettings(normalizedSettings);
+	return normalizedSettings;
+}
+
+async function saveJuicePopupSettingsToServer(settings, adminToken) {
+	const response = await fetch(buildApiUrl("/admin/juice-popup-settings"), {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			...authHeaders(adminToken),
+		},
+		body: JSON.stringify({
+			juicePopupSettings: normalizeJuicePopupSettings(settings),
+		}),
+	});
+	const data = await response.json();
+
+	if (!response.ok || data.success === false) {
+		const error = new Error(data.message || "לא ניתן היה לשמור את הגדרת הפופאפ.");
+		error.status = response.status;
+		throw error;
+	}
+
+	const normalizedSettings = normalizeJuicePopupSettings(
+		data.juicePopupSettings
+		);
+	setStoredJuicePopupSettings(normalizedSettings);
 	return normalizedSettings;
 }
 
@@ -445,6 +594,57 @@ function getCustomerTotalChildren(customer) {
 	}
 
 	return (unmarriedChildren || 0) + (marriedChildren || 0);
+}
+
+function getCustomerUnmarriedChildren(customer) {
+	return parseOptionalInteger(customer?.unmarried_children);
+}
+
+function getJuicePopupCustomerCount(customer, settings = getStoredJuicePopupSettings()) {
+	const normalizedSettings = normalizeJuicePopupSettings(settings);
+	return normalizedSettings.childCountMode === JUICE_POPUP_COUNT_MODE_TOTAL
+		? getCustomerTotalChildren(customer)
+		: getCustomerUnmarriedChildren(customer);
+}
+
+function resolveJuicePopupText(template, customer, settings) {
+	const normalizedTemplate = cleanText(template);
+	const normalizedSettings = normalizeJuicePopupSettings(settings);
+	const count = getJuicePopupCustomerCount(customer, normalizedSettings);
+	const replacements = {
+		"{count}": count === null ? "-" : String(count),
+		"{threshold}": String(normalizedSettings.minChildrenThreshold),
+		"{lastName}": cleanText(customer?.last_name) || "-",
+		"{countLabel}": formatJuicePopupCountLabel(normalizedSettings),
+	};
+
+	return Object.entries(replacements).reduce(
+		(resultText, [token, value]) =>
+			resultText.split(token).join(value),
+		normalizedTemplate
+	);
+}
+
+function shouldShowJuicePopup(customer, settings = getStoredJuicePopupSettings()) {
+	const normalizedSettings = normalizeJuicePopupSettings(settings);
+	const customerCount = getJuicePopupCustomerCount(customer, normalizedSettings);
+	return (
+		normalizedSettings.enabled &&
+		customerCount !== null &&
+		customerCount >= normalizedSettings.minChildrenThreshold
+	);
+}
+
+function buildJuicePopupContent(customer, settings = getStoredJuicePopupSettings()) {
+	const normalizedSettings = normalizeJuicePopupSettings(settings);
+	return {
+		title: resolveJuicePopupText(normalizedSettings.title, customer, normalizedSettings),
+		message: resolveJuicePopupText(
+			normalizedSettings.message,
+			customer,
+			normalizedSettings
+		),
+	};
 }
 
 function customerMatchesTimeWindow(customer, timeWindow) {
@@ -566,18 +766,29 @@ function evaluateCustomerTimeWindows(
 }
 
 export {
+	JUICE_POPUP_COUNT_MODE_TOTAL,
+	JUICE_POPUP_COUNT_MODE_UNMARRIED,
 	TIME_WINDOW_TYPE_CHILDREN,
 	TIME_WINDOW_TYPE_LAST_NAME,
 	TIME_WINDOW_TYPE_LAST_NAME_INITIAL,
+	buildJuicePopupContent,
 	buildEmptyTimeWindow,
 	buildBlockedTimeWindowMessage,
+	cloneJuicePopupSettings,
 	cloneTimeWindowSettings,
 	describeTimeWindowCriteria,
 	evaluateCustomerTimeWindows,
+	fetchDistributionSettingsFromServer,
+	fetchJuicePopupSettingsFromServer,
 	fetchTimeWindowsSettingsFromServer,
+	formatJuicePopupCountLabel,
 	formatTimeWindowLabel,
 	formatTimeWindowSchedule,
+	getStoredJuicePopupSettings,
 	getStoredTimeWindowsSettings,
+	saveJuicePopupSettingsToServer,
 	saveTimeWindowsSettingsToServer,
+	setStoredJuicePopupSettings,
 	setStoredTimeWindowsSettings,
+	shouldShowJuicePopup,
 };
