@@ -398,7 +398,7 @@ export default {
 			lastNameResults: [],
 			lastNameSearchError: null,
 			lastNameResultsVisible: true,
-			juicePopupEnabled: false,
+			juicePopupEnabled: true,
 			showJuicePopup: false,
 			juiceSecondsLeft: 6,
 			juicePopupIntervalId: null,
