@@ -3,6 +3,38 @@ import { authHeaders, buildApiUrl } from "./api";
 const TIME_WINDOWS_STORAGE_KEY = "kupa.timeWindows.v1";
 const TIME_WINDOW_TYPE_CHILDREN = "children";
 const TIME_WINDOW_TYPE_LAST_NAME = "lastName";
+const TIME_WINDOW_TYPE_LAST_NAME_INITIAL = "lastNameInitial";
+const HEBREW_LETTER_ORDER = [
+	"א",
+	"ב",
+	"ג",
+	"ד",
+	"ה",
+	"ו",
+	"ז",
+	"ח",
+	"ט",
+	"י",
+	"כ",
+	"ל",
+	"מ",
+	"נ",
+	"ס",
+	"ע",
+	"פ",
+	"צ",
+	"ק",
+	"ר",
+	"ש",
+	"ת",
+];
+const HEBREW_FINAL_LETTER_MAP = {
+	"ך": "כ",
+	"ם": "מ",
+	"ן": "נ",
+	"ף": "פ",
+	"ץ": "צ",
+};
 
 function cleanText(value) {
 	return value === undefined || value === null ? "" : String(value).trim();
@@ -10,6 +42,91 @@ function cleanText(value) {
 
 function normalizeFamilyName(value) {
 	return cleanText(value).replace(/\s+/g, " ");
+}
+
+function normalizeLetterValue(value) {
+	const firstCharacter = Array.from(cleanText(value))[0] || "";
+	if (!firstCharacter) {
+		return "";
+	}
+
+	const normalizedCharacter = firstCharacter.normalize("NFKD").replace(/[\u0591-\u05C7]/g, "");
+	if (!normalizedCharacter) {
+		return "";
+	}
+
+	const mappedCharacter =
+		HEBREW_FINAL_LETTER_MAP[normalizedCharacter] || normalizedCharacter;
+	return /[A-Za-z]/.test(mappedCharacter)
+		? mappedCharacter.toUpperCase()
+		: mappedCharacter;
+}
+
+function getLetterSortValue(letter) {
+	const normalizedLetter = normalizeLetterValue(letter);
+	if (!normalizedLetter) {
+		return null;
+	}
+
+	const hebrewLetterIndex = HEBREW_LETTER_ORDER.indexOf(normalizedLetter);
+	if (hebrewLetterIndex !== -1) {
+		return {
+			group: "he",
+			index: hebrewLetterIndex,
+			value: normalizedLetter,
+		};
+	}
+
+	return {
+		group: "other",
+		index: normalizedLetter.codePointAt(0) || 0,
+		value: normalizedLetter,
+	};
+}
+
+function isLetterInRange(letter, startLetter, endLetter) {
+	const targetLetter = getLetterSortValue(letter);
+	const startLetterSortValue = getLetterSortValue(startLetter);
+	const endLetterSortValue = getLetterSortValue(endLetter);
+	if (!targetLetter || (!startLetterSortValue && !endLetterSortValue)) {
+		return false;
+	}
+
+	if (
+		startLetterSortValue &&
+		targetLetter.group !== startLetterSortValue.group
+	) {
+		return false;
+	}
+
+	if (endLetterSortValue && targetLetter.group !== endLetterSortValue.group) {
+		return false;
+	}
+
+	if (
+		startLetterSortValue &&
+		endLetterSortValue &&
+		startLetterSortValue.index > endLetterSortValue.index
+	) {
+		return (
+			targetLetter.index >= endLetterSortValue.index &&
+			targetLetter.index <= startLetterSortValue.index
+		);
+	}
+
+	if (startLetterSortValue && targetLetter.index < startLetterSortValue.index) {
+		return false;
+	}
+
+	if (endLetterSortValue && targetLetter.index > endLetterSortValue.index) {
+		return false;
+	}
+
+	return true;
+}
+
+function getFamilyNameInitial(value) {
+	return normalizeLetterValue(Array.from(normalizeFamilyName(value))[0] || "");
 }
 
 function normalizeTimeValue(value) {
@@ -86,11 +203,31 @@ function formatLastNamesLabel(lastNames) {
 		: `משפחות: ${preview}`;
 }
 
+function formatInitialLettersLabel(startLetter, endLetter) {
+	const normalizedStartLetter = normalizeLetterValue(startLetter);
+	const normalizedEndLetter = normalizeLetterValue(endLetter);
+	if (normalizedStartLetter && normalizedEndLetter) {
+		return `משפחות לפי אות ראשונה ${normalizedStartLetter}-${normalizedEndLetter}`;
+	}
+
+	if (normalizedStartLetter) {
+		return `משפחות מהאות ${normalizedStartLetter}`;
+	}
+
+	if (normalizedEndLetter) {
+		return `משפחות עד האות ${normalizedEndLetter}`;
+	}
+
+	return "חלון לפי אות ראשונה של שם משפחה";
+}
+
 function normalizeTimeWindow(inputWindow = {}, fallbackIndex = 0) {
 	const type =
 		cleanText(inputWindow.type) === TIME_WINDOW_TYPE_LAST_NAME
 			? TIME_WINDOW_TYPE_LAST_NAME
-			: TIME_WINDOW_TYPE_CHILDREN;
+			: cleanText(inputWindow.type) === TIME_WINDOW_TYPE_LAST_NAME_INITIAL
+				? TIME_WINDOW_TYPE_LAST_NAME_INITIAL
+				: TIME_WINDOW_TYPE_CHILDREN;
 
 	return {
 		id: cleanText(inputWindow.id) || `time_window_${fallbackIndex + 1}`,
@@ -105,6 +242,14 @@ function normalizeTimeWindow(inputWindow = {}, fallbackIndex = 0) {
 		maxChildren:
 			type === TIME_WINDOW_TYPE_CHILDREN
 				? cleanText(inputWindow.maxChildren)
+				: "",
+		startLetter:
+			type === TIME_WINDOW_TYPE_LAST_NAME_INITIAL
+				? normalizeLetterValue(inputWindow.startLetter)
+				: "",
+		endLetter:
+			type === TIME_WINDOW_TYPE_LAST_NAME_INITIAL
+				? normalizeLetterValue(inputWindow.endLetter)
 				: "",
 		lastNamesText:
 			type === TIME_WINDOW_TYPE_LAST_NAME
@@ -142,6 +287,8 @@ function buildEmptyTimeWindow(type = TIME_WINDOW_TYPE_CHILDREN) {
 		nextActivationTime: "",
 		minChildren: "",
 		maxChildren: "",
+		startLetter: "",
+		endLetter: "",
 		lastNamesText: "",
 	});
 }
@@ -231,6 +378,13 @@ function formatTimeWindowLabel(timeWindow) {
 		return formatLastNamesLabel(getTimeWindowLastNames(normalizedWindow));
 	}
 
+	if (normalizedWindow.type === TIME_WINDOW_TYPE_LAST_NAME_INITIAL) {
+		return formatInitialLettersLabel(
+			normalizedWindow.startLetter,
+			normalizedWindow.endLetter
+		);
+	}
+
 	return formatChildrenRangeLabel(
 		parseOptionalInteger(normalizedWindow.minChildren),
 		parseOptionalInteger(normalizedWindow.maxChildren)
@@ -249,6 +403,24 @@ function describeTimeWindowCriteria(timeWindow) {
 		return lastNames.length > 0
 			? `שמות משפחה: ${lastNames.join(", ")}`
 			: "לא הוגדרו עדיין שמות משפחה לחלון הזה.";
+	}
+
+	if (normalizedWindow.type === TIME_WINDOW_TYPE_LAST_NAME_INITIAL) {
+		const normalizedStartLetter = normalizeLetterValue(normalizedWindow.startLetter);
+		const normalizedEndLetter = normalizeLetterValue(normalizedWindow.endLetter);
+		if (!normalizedStartLetter && !normalizedEndLetter) {
+			return "לא הוגדר עדיין טווח אותיות לחלון הזה.";
+		}
+
+		if (normalizedStartLetter && normalizedEndLetter) {
+			return `אות ראשונה של שם המשפחה בין ${normalizedStartLetter} ל-${normalizedEndLetter}.`;
+		}
+
+		if (normalizedStartLetter) {
+			return `אות ראשונה של שם המשפחה החל מ-${normalizedStartLetter}.`;
+		}
+
+		return `אות ראשונה של שם המשפחה עד ${normalizedEndLetter}.`;
 	}
 
 	const minChildren = parseOptionalInteger(normalizedWindow.minChildren);
@@ -285,6 +457,15 @@ function customerMatchesTimeWindow(customer, timeWindow) {
 		const customerLastName = normalizeFamilyName(customer.last_name);
 		const lastNames = getTimeWindowLastNames(normalizedWindow);
 		return Boolean(customerLastName) && lastNames.includes(customerLastName);
+	}
+
+	if (normalizedWindow.type === TIME_WINDOW_TYPE_LAST_NAME_INITIAL) {
+		const customerInitial = getFamilyNameInitial(customer.last_name);
+		return isLetterInRange(
+			customerInitial,
+			normalizedWindow.startLetter,
+			normalizedWindow.endLetter
+		);
 	}
 
 	const minChildren = parseOptionalInteger(normalizedWindow.minChildren);
@@ -363,8 +544,11 @@ function evaluateCustomerTimeWindows(
 	const isBlocked =
 		Boolean(customer) &&
 		normalizedSettings.enabled &&
-		matchingActiveWindows.length === 0 &&
 		matchingInactiveWindows.length > 0;
+	const primaryBlockedWindow = matchingInactiveWindows[0] || null;
+	const primaryWindow = isBlocked
+		? primaryBlockedWindow
+		: matchingActiveWindows[0] || primaryBlockedWindow || null;
 
 	const decision = {
 		settings: normalizedSettings,
@@ -372,9 +556,8 @@ function evaluateCustomerTimeWindows(
 		matchingActiveWindows,
 		matchingInactiveWindows,
 		isBlocked,
-		primaryWindow:
-			matchingActiveWindows[0] || matchingInactiveWindows[0] || null,
-		primaryBlockedWindow: matchingInactiveWindows[0] || null,
+		primaryWindow,
+		primaryBlockedWindow,
 		blockedMessage: "",
 	};
 
@@ -385,6 +568,7 @@ function evaluateCustomerTimeWindows(
 export {
 	TIME_WINDOW_TYPE_CHILDREN,
 	TIME_WINDOW_TYPE_LAST_NAME,
+	TIME_WINDOW_TYPE_LAST_NAME_INITIAL,
 	buildEmptyTimeWindow,
 	buildBlockedTimeWindowMessage,
 	cloneTimeWindowSettings,

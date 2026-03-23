@@ -489,10 +489,7 @@ export default {
 		},
 		async updateTaken() {
 			try {
-				const response = await fetch(buildApiUrl("/updateTaken"), {
-					method: "GET",
-					headers: { "Content-Type": "application/json" },
-				});
+				const response = await fetch(buildApiUrl("/updateTaken"));
 				const data = await readJsonResponse(response);
 				this.totalTaken = data.totalTaken;
 				this.percentageTaken = data.percentageTaken;

@@ -541,9 +541,10 @@
 				<h2>חלונות זמן למסירה</h2>
 				<div class="time-window-settings">
 					<p class="hint">
-						כאן אפשר להגדיר חלונות זמן לפי מספר ילדים או לפי שם משפחה,
-						ולבחור אילו חלונות פעילים כרגע. ההגדרות נשמרות בשרת לכל
-						המשתמשים, בלי לשנות את טבלאות הלקוחות הרגילות.
+						כאן אפשר להגדיר חלונות זמן לפי מספר ילדים, לפי שמות משפחה
+						ספציפיים, או לפי האות הראשונה של שם המשפחה, ולבחור אילו חלונות
+						פעילים כרגע. ההגדרות נשמרות בשרת לכל המשתמשים, בלי לשנות את
+						טבלאות הלקוחות הרגילות.
 					</p>
 					<label class="checkbox-row">
 						<input v-model="timeWindowSettingsForm.enabled" type="checkbox" />
@@ -573,6 +574,9 @@
 						</button>
 						<button class="secondary" @click="addLastNameTimeWindow">
 							הוסף חלון לפי שם משפחה
+						</button>
+						<button class="secondary" @click="addLastNameInitialTimeWindow">
+							הוסף חלון לפי אות
 						</button>
 						<button class="secondary" @click="loadTimeWindowSettings">
 							טען הגדרות שמורות
@@ -637,6 +641,9 @@
 										<option :value="TIME_WINDOW_TYPE_LAST_NAME">
 											לפי שם משפחה
 										</option>
+										<option :value="TIME_WINDOW_TYPE_LAST_NAME_INITIAL">
+											לפי אות ראשונה של שם משפחה
+										</option>
 									</select>
 								</div>
 								<div>
@@ -682,6 +689,39 @@
 										placeholder="ללא מקסימום"
 									/>
 								</div>
+							</div>
+							<div
+								v-else-if="timeWindow.type === TIME_WINDOW_TYPE_LAST_NAME_INITIAL"
+								class="form-grid"
+							>
+								<div>
+									<label :for="`time-window-start-letter-${timeWindow.id}`">
+										מהאות
+									</label>
+									<input
+										:id="`time-window-start-letter-${timeWindow.id}`"
+										v-model="timeWindow.startLetter"
+										type="text"
+										maxlength="1"
+										placeholder="א"
+									/>
+								</div>
+								<div>
+									<label :for="`time-window-end-letter-${timeWindow.id}`">
+										עד האות
+									</label>
+									<input
+										:id="`time-window-end-letter-${timeWindow.id}`"
+										v-model="timeWindow.endLetter"
+										type="text"
+										maxlength="1"
+										placeholder="י"
+									/>
+								</div>
+								<p class="hint">
+									לדוגמה: מ-א עד י יתאים לכל משפחה שהאות הראשונה של שם
+									המשפחה שלה נמצאת בטווח הזה.
+								</p>
 							</div>
 							<div v-else class="time-window-last-names">
 								<label :for="`time-window-names-${timeWindow.id}`">
@@ -765,6 +805,7 @@ import {
 import {
 	TIME_WINDOW_TYPE_CHILDREN,
 	TIME_WINDOW_TYPE_LAST_NAME,
+	TIME_WINDOW_TYPE_LAST_NAME_INITIAL,
 	buildEmptyTimeWindow,
 	cloneTimeWindowSettings,
 	describeTimeWindowCriteria,
@@ -922,6 +963,7 @@ export default {
 			saveUsersPasswordLoading: false,
 			TIME_WINDOW_TYPE_CHILDREN,
 			TIME_WINDOW_TYPE_LAST_NAME,
+			TIME_WINDOW_TYPE_LAST_NAME_INITIAL,
 			timeWindowSettingsForm: cloneTimeWindowSettings(
 				getStoredTimeWindowsSettings()
 			),
@@ -1060,6 +1102,9 @@ export default {
 		},
 		addLastNameTimeWindow() {
 			this.addTimeWindow(TIME_WINDOW_TYPE_LAST_NAME);
+		},
+		addLastNameInitialTimeWindow() {
+			this.addTimeWindow(TIME_WINDOW_TYPE_LAST_NAME_INITIAL);
 		},
 		handleTimeWindowTypeChange(index, nextType) {
 			const currentWindow = this.timeWindowSettingsForm.windows[index];
