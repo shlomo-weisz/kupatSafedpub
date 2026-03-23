@@ -89,22 +89,24 @@
 							<div class="result-header-copy">
 								<h2>תוצאות חיפוש</h2>
 								<p>פרטי המשפחה כפי שהם שמורים במערכת הפעילה.</p>
-								<p v-if="result.received" class="received-message">הלקוח כבר קיבל</p>
+								<p v-if="result.received" class="received-message">
+									{{ buildReceivedStatusMessage(result) }}
+								</p>
 							</div>
 							<div class="result-header-actions">
 								<button
 									v-if="!result.received"
-									@click="markReceived"
+									@click="openPaymentPopup"
 									:disabled="resultTimeWindowDecision.isBlocked"
 									:class="[
-										'mark-button',
+										'payment-button',
 										{ 'mark-button--disabled': resultTimeWindowDecision.isBlocked },
 									]"
 								>
 									{{
 										resultTimeWindowDecision.isBlocked
 											? "חלון הזמן לא פעיל"
-											: "סמן כקיבל"
+											: "תשלום"
 									}}
 								</button>
 								<button
@@ -112,7 +114,7 @@
 									@click="approveTimeWindowOverride"
 									class="admin-override-button"
 								>
-									אישור מנהל וסימון בכל זאת
+									אישור מנהל והמשך לתשלום
 								</button>
 								<button @click="openUpdateForm" class="update-button">
 									עדכן נתונים
@@ -171,6 +173,13 @@
 							</li>
 							<li v-if="result.received">
 								<strong>שעת קבלה:</strong> {{ formatTime(result.received_time) }}
+							</li>
+							<li v-if="result.received && result.payment_method">
+								<strong>אמצעי תשלום:</strong>
+								{{ formatPaymentMethod(result.payment_method) }}
+							</li>
+							<li v-if="result.received && result.payment_time">
+								<strong>שעת תשלום:</strong> {{ formatTime(result.payment_time) }}
 							</li>
 						</ul>
 					</div>
@@ -304,6 +313,79 @@
 		</div>
 
 		<div
+			v-if="showPaymentPopup && result"
+			class="popup-overlay"
+			@click.self="closePaymentPopup"
+		>
+			<div
+				class="popup-content popup-content--payment"
+				role="dialog"
+				aria-modal="true"
+				aria-labelledby="payment-title"
+			>
+				<button class="popup-close" @click="closePaymentPopup" aria-label="סגור">
+					×
+				</button>
+				<h3 id="payment-title">
+					{{
+						paymentPopupStage === "select"
+							? "איך הלקוח משלם?"
+							: "אישור תשלום באשראי"
+					}}
+				</h3>
+				<p v-if="paymentPopupStage === 'select'">
+					בחרו אם הלקוח משלם במזומן או באשראי.
+				</p>
+				<p v-else>
+					נפתח דף התשלום באשראי. אחרי שהעסקה הושלמה, לחצו כאן על אישור
+					כדי לסמן שהלקוח קיבל ושילם באשראי.
+				</p>
+				<div class="payment-popup-actions">
+					<button
+						v-if="paymentPopupStage === 'select'"
+						type="button"
+						class="payment-button"
+						:disabled="isSubmittingPayment"
+						@click="confirmCashPayment"
+					>
+						מזומן
+					</button>
+					<button
+						v-if="paymentPopupStage === 'select'"
+						type="button"
+						class="update-button"
+						:disabled="isSubmittingPayment"
+						@click="startCreditPayment"
+					>
+						אשראי
+					</button>
+					<button
+						v-if="paymentPopupStage === 'confirmCredit'"
+						type="button"
+						class="payment-button"
+						:disabled="isSubmittingPayment"
+						@click="confirmCreditPayment"
+					>
+						{{
+							isSubmittingPayment
+								? "מאשר תשלום..."
+								: "אישור תשלום באשראי"
+						}}
+					</button>
+					<button
+						v-if="paymentPopupStage === 'confirmCredit'"
+						type="button"
+						class="cancel-button"
+						:disabled="isSubmittingPayment"
+						@click="paymentPopupStage = 'select'"
+					>
+						חזרה
+					</button>
+				</div>
+			</div>
+		</div>
+
+		<div
 			v-if="showTimeWindowPopup && result && resultTimeWindowDecision.isBlocked"
 			class="popup-overlay"
 			@click.self="closeTimeWindowPopup"
@@ -329,7 +411,7 @@
 				</p>
 				<div class="update-actions">
 					<button class="admin-override-button" @click="approveTimeWindowOverride">
-						אישור מנהל וסימון בכל זאת
+						אישור מנהל והמשך לתשלום
 					</button>
 					<button class="cancel-button" @click="closeTimeWindowPopup">סגור</button>
 				</div>
@@ -374,6 +456,8 @@ async function readJsonResponse(response) {
 	return data;
 }
 
+const CREDIT_PAYMENT_URL = "https://www.matara.pro/nedarimplus/online/?S=lVFY";
+
 export default {
 	components: {
 		RegisterCustomer,
@@ -412,6 +496,10 @@ export default {
 			statsIntervalId: null,
 			timeWindowSettings: getStoredTimeWindowsSettings(),
 			showTimeWindowPopup: false,
+			showPaymentPopup: false,
+			paymentPopupStage: "select",
+			paymentPopupBypassTimeWindow: false,
+			isSubmittingPayment: false,
 		};
 	},
 	computed: {
@@ -483,6 +571,36 @@ export default {
 		},
 		closeTimeWindowPopup() {
 			this.showTimeWindowPopup = false;
+		},
+		async openPaymentPopup(options = {}) {
+			if (!this.result) {
+				return;
+			}
+
+			await this.loadSharedSettings();
+			const decision = evaluateCustomerTimeWindows(
+				this.result,
+				this.timeWindowSettings
+			);
+			if (!options.bypassTimeWindow && decision.isBlocked) {
+				this.closePaymentPopup();
+				this.showTimeWindowPopup = true;
+				return;
+			}
+
+			this.closeTimeWindowPopup();
+			this.paymentPopupBypassTimeWindow = Boolean(options.bypassTimeWindow);
+			this.paymentPopupStage = "select";
+			this.showPaymentPopup = true;
+		},
+		closePaymentPopup() {
+			this.showPaymentPopup = false;
+			this.paymentPopupStage = "select";
+			this.paymentPopupBypassTimeWindow = false;
+		},
+		startCreditPayment() {
+			window.open(CREDIT_PAYMENT_URL, "_blank", "noopener,noreferrer");
+			this.paymentPopupStage = "confirmCredit";
 		},
 		async requestAdminTimeWindowApproval() {
 			const password = window.prompt(
@@ -675,8 +793,8 @@ export default {
 			}
 			this.showJuicePopup = false;
 		},
-		async performMarkReceived(options = {}) {
-			if (!this.result) {
+		async performPaymentMark(paymentMethod, options = {}) {
+			if (!this.result || this.isSubmittingPayment) {
 				return;
 			}
 
@@ -686,10 +804,12 @@ export default {
 				this.timeWindowSettings
 			);
 			if (!options.bypassTimeWindow && decision.isBlocked) {
+				this.closePaymentPopup();
 				this.showTimeWindowPopup = true;
 				return;
 			}
 
+			this.isSubmittingPayment = true;
 			try {
 				const token = await this.ensureUsersToken();
 				const response = await fetch(buildApiUrl("/mark"), {
@@ -701,19 +821,27 @@ export default {
 					body: JSON.stringify({
 						id: this.result.id,
 						volunteer_name: this.volunteerName,
+						payment_method: paymentMethod,
 					}),
 				});
 				const res = await readJsonResponse(response);
+				const updatedCustomer = res.customer || {
+					...this.result,
+					received: true,
+					volunteer_name: this.volunteerName,
+					payment_method: paymentMethod,
+				};
 
-				if (shouldShowJuicePopup(this.result, this.juicePopupSettings)) {
+				if (shouldShowJuicePopup(updatedCustomer, this.juicePopupSettings)) {
 					this.openJuicePopup(
-						buildJuicePopupContent(this.result, this.juicePopupSettings)
+						buildJuicePopupContent(updatedCustomer, this.juicePopupSettings)
 					);
 				}
 
+				this.closePaymentPopup();
 				this.closeTimeWindowPopup();
 				this.totalTaken = res.totalTaken;
-				this.lastReceived = this.result;
+				this.lastReceived = updatedCustomer;
 				this.percentageTaken = res.percentageTaken;
 				this.totalCustomers = res.totalCustomers;
 				this.resetSearch();
@@ -722,15 +850,24 @@ export default {
 					clearStoredToken("users");
 				}
 				alert(error.message);
+			} finally {
+				this.isSubmittingPayment = false;
 			}
 		},
-		async markReceived() {
-			await this.performMarkReceived();
+		async confirmCashPayment() {
+			await this.performPaymentMark("cash", {
+				bypassTimeWindow: this.paymentPopupBypassTimeWindow,
+			});
+		},
+		async confirmCreditPayment() {
+			await this.performPaymentMark("credit", {
+				bypassTimeWindow: this.paymentPopupBypassTimeWindow,
+			});
 		},
 		async approveTimeWindowOverride() {
 			try {
 				await this.requestAdminTimeWindowApproval();
-				await this.performMarkReceived({ bypassTimeWindow: true });
+				await this.openPaymentPopup({ bypassTimeWindow: true });
 			} catch (error) {
 				if (error.message !== "האישור בוטל.") {
 					alert("סיסמת המנהל שגויה או שהשרת לא זמין.");
@@ -749,6 +886,7 @@ export default {
 			this.lastNameSearchError = null;
 			this.showUpdateForm = false;
 			this.closeTimeWindowPopup();
+			this.closePaymentPopup();
 			this.$nextTick(() => {
 				if (this.$refs.idInput && typeof this.$refs.idInput.focus === "function") {
 					this.$refs.idInput.focus();
@@ -767,6 +905,40 @@ export default {
 				return "";
 			}
 			return value;
+		},
+		formatPaymentMethod(paymentMethod) {
+			const normalizedPaymentMethod = String(paymentMethod || "")
+				.trim()
+				.toLowerCase();
+
+			if (normalizedPaymentMethod === "cash") {
+				return "מזומן";
+			}
+
+			if (normalizedPaymentMethod === "credit") {
+				return "אשראי";
+			}
+
+			return paymentMethod || "";
+		},
+		buildReceivedStatusMessage(customer) {
+			if (!customer?.received) {
+				return "";
+			}
+
+			const normalizedPaymentMethod = String(customer.payment_method || "")
+				.trim()
+				.toLowerCase();
+
+			if (normalizedPaymentMethod === "cash") {
+				return "הלקוח כבר קיבל ושילם במזומן";
+			}
+
+			if (normalizedPaymentMethod === "credit") {
+				return "הלקוח כבר קיבל ושילם באשראי";
+			}
+
+			return "הלקוח כבר קיבל";
 		},
 		openUpdateForm() {
 			this.showUpdateForm = true;
@@ -1010,7 +1182,7 @@ button:disabled {
 	border: 1px solid var(--color-border-strong);
 }
 
-.mark-button {
+.payment-button {
 	background: linear-gradient(135deg, var(--color-success), #47a16f);
 }
 
@@ -1225,6 +1397,10 @@ button:disabled {
 	border-color: rgba(182, 79, 71, 0.22);
 }
 
+.popup-content--payment {
+	border-color: rgba(47, 125, 89, 0.2);
+}
+
 .popup-content h3 {
 	margin: 0 0 10px;
 	font-size: 28px;
@@ -1241,6 +1417,13 @@ button:disabled {
 .popup-countdown {
 	color: var(--color-text-muted);
 	font-size: 14px;
+}
+
+.payment-popup-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+	margin-top: 18px;
 }
 
 .popup-close {

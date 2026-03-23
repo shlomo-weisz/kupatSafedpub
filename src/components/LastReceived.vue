@@ -9,6 +9,10 @@
 			<li><strong>ילדים נשואים</strong><span>{{ lastReceived.married_children }}</span></li>
 			<li><strong>ילדים לא נשואים</strong><span>{{ lastReceived.unmarried_children }}</span></li>
 			<li><strong>סה"כ ילדים</strong><span>{{ lastReceived.total_children }}</span></li>
+			<li v-if="lastReceived.payment_method">
+				<strong>תשלום</strong>
+				<span>{{ formatPaymentMethod(lastReceived.payment_method) }}</span>
+			</li>
 		</ul>
 	</div>
 </template>
@@ -19,6 +23,23 @@ export default {
 		lastReceived: {
 			type: Object,
 			required: false,
+		},
+	},
+	methods: {
+		formatPaymentMethod(paymentMethod) {
+			const normalizedPaymentMethod = String(paymentMethod || "")
+				.trim()
+				.toLowerCase();
+
+			if (normalizedPaymentMethod === "cash") {
+				return "מזומן";
+			}
+
+			if (normalizedPaymentMethod === "credit") {
+				return "אשראי";
+			}
+
+			return paymentMethod || "";
 		},
 	},
 };
