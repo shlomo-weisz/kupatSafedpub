@@ -39,6 +39,10 @@ export default {
 				return "אשראי";
 			}
 
+			if (normalizedPaymentMethod === "unpaid") {
+				return "לא שילם";
+			}
+
 			return paymentMethod || "";
 		},
 	},

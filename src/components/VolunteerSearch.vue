@@ -360,6 +360,15 @@
 						אשראי
 					</button>
 					<button
+						v-if="paymentPopupStage === 'select'"
+						type="button"
+						class="admin-override-button"
+						:disabled="isSubmittingPayment"
+						@click="confirmDeferredPayment"
+					>
+						ישלם אחר כך באישור מנהל
+					</button>
+					<button
 						v-if="paymentPopupStage === 'confirmCredit'"
 						type="button"
 						class="payment-button"
@@ -602,15 +611,18 @@ export default {
 			window.open(CREDIT_PAYMENT_URL, "_blank", "noopener,noreferrer");
 			this.paymentPopupStage = "confirmCredit";
 		},
-		async requestAdminTimeWindowApproval() {
-			const password = window.prompt(
-				"נדרשת סיסמת מנהל כדי לאשר חריגה מחלון הזמן:"
-			);
+		async requestAdminApproval(message) {
+			const password = window.prompt(message);
 			if (!password) {
 				throw new Error("האישור בוטל.");
 			}
 
 			await loginWithRole("admin", password);
+		},
+		async requestAdminTimeWindowApproval() {
+			await this.requestAdminApproval(
+				"נדרשת סיסמת מנהל כדי לאשר חריגה מחלון הזמן:"
+			);
 		},
 		async updateTaken() {
 			try {
@@ -864,6 +876,22 @@ export default {
 				bypassTimeWindow: this.paymentPopupBypassTimeWindow,
 			});
 		},
+		async confirmDeferredPayment() {
+			try {
+				await this.requestAdminApproval(
+					"נדרשת סיסמת מנהל כדי לאשר שהלקוח ישלם אחר כך:"
+				);
+				await this.performPaymentMark("unpaid", {
+					bypassTimeWindow: this.paymentPopupBypassTimeWindow,
+				});
+			} catch (error) {
+				if (error.message === "האישור בוטל.") {
+					return;
+				}
+
+				alert("סיסמת המנהל שגויה או שהשרת לא זמין.");
+			}
+		},
 		async approveTimeWindowOverride() {
 			try {
 				await this.requestAdminTimeWindowApproval();
@@ -919,6 +947,10 @@ export default {
 				return "אשראי";
 			}
 
+			if (normalizedPaymentMethod === "unpaid") {
+				return "לא שילם";
+			}
+
 			return paymentMethod || "";
 		},
 		buildReceivedStatusMessage(customer) {
@@ -936,6 +968,10 @@ export default {
 
 			if (normalizedPaymentMethod === "credit") {
 				return "הלקוח כבר קיבל ושילם באשראי";
+			}
+
+			if (normalizedPaymentMethod === "unpaid") {
+				return "הלקוח כבר קיבל ועדיין לא שילם";
 			}
 
 			return "הלקוח כבר קיבל";

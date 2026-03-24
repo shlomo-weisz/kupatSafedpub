@@ -484,6 +484,7 @@
 					<button @click="sendReport('all')">כל המקבלים</button>
 					<button @click="sendReport('received')">כבר לקחו</button>
 					<button @click="sendReport('notReceived')">עדיין לא לקחו</button>
+					<button @click="sendReport('unpaid')">אלו שלא שילמו</button>
 					<button @click="sendReport('update')">מאגר רישום לעדכון</button>
 					<button @click="sendReport('phones')">טלפונים שלא לקחו</button>
 					<button @click="sendReport('waites')">רשימת המתנה</button>
